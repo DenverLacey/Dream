@@ -10,6 +10,7 @@ pub struct VM {
 pub struct Registers {
     pub z: u8,
     pub sri: u16,
+    pub srr: u64,
     pub sr: [u64; 6],
     pub gen: General,
 }

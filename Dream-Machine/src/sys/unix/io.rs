@@ -1,8 +1,11 @@
-use crate::sys::FileID;
+use crate::sys::{FileFlags, FileID};
 use std::{
-    fs::File,
+    fs::{File, OpenOptions},
     io::Write,
-    os::{fd::RawFd, unix::io::FromRawFd},
+    os::{
+        fd::{AsRawFd, RawFd},
+        unix::io::FromRawFd,
+    },
 };
 
 pub fn write(fid: FileID, bytes_to_write: &[u8]) {
@@ -19,6 +22,25 @@ pub fn write(fid: FileID, bytes_to_write: &[u8]) {
     }
 
     std::mem::forget(file);
+}
+
+pub fn open(path: &str, flags: FileFlags) -> FileID {
+    let file = OpenOptions::new()
+        .create_new((flags & FileFlags::CreateNew) == FileFlags::CreateNew)
+        .create((flags & FileFlags::Create) == FileFlags::Create)
+        .read((flags & FileFlags::Read) == FileFlags::Read)
+        .write((flags & FileFlags::Write) == FileFlags::Write)
+        .append((flags & FileFlags::Append) == FileFlags::Append)
+        .truncate((flags & FileFlags::Truncate) == FileFlags::Truncate)
+        .open(path)
+        .map_err(|err| panic!("Cannot open file: {path}: {err}."))
+        .unwrap();
+
+    let raw_fd = file.as_raw_fd();
+    let fid = raw_fd as FileID;
+
+    std::mem::forget(file);
+    fid
 }
 
 pub fn close(fid: FileID) {
