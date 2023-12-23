@@ -1,6 +1,7 @@
 use crate::sys::FileID;
 
 use std::os::windows::io::{FromRawHandle, RawHandle};
+use std::{fs::File, io::Write};
 
 pub fn write(fid: FileID, bytes_to_write: &[u8]) {
     let raw_handle = fid as RawHandle;
