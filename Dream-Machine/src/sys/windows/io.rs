@@ -1,6 +1,6 @@
-use crate::sys::FileID;
+use crate::sys::{FileFlags, FileID};
 
-use std::os::windows::io::{FromRawHandle, RawHandle};
+use std::os::windows::io::{AsRawHandle, FromRawHandle, RawHandle};
 use std::{
     fs::{File, OpenOptions},
     io::Write,
@@ -34,8 +34,8 @@ pub fn open(path: &str, flags: FileFlags) -> FileID {
         .map_err(|err| panic!("Cannot open file: {path}: {err}."))
         .unwrap();
 
-    let raw_fd = file.as_raw_handle();
-    let fid = raw_fd as FileID;
+    let raw_handle = file.as_raw_handle();
+    let fid = raw_handle as FileID;
 
     std::mem::forget(file);
     fid
