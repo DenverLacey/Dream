@@ -1,4 +1,4 @@
-use crate::sys::{FileFlags, FileID};
+use crate::sys::{FileID, OpenFlags};
 
 use std::os::windows::io::{AsRawHandle, FromRawHandle, RawHandle};
 use std::{
@@ -35,14 +35,14 @@ pub fn write(fid: FileID, bytes_to_write: &[u8]) {
     std::mem::forget(file);
 }
 
-pub fn open(path: &str, flags: FileFlags) -> FileID {
+pub fn open(path: &str, flags: OpenFlags) -> FileID {
     let file = OpenOptions::new()
-        .create_new((flags & FileFlags::CreateNew) == FileFlags::CreateNew)
-        .create((flags & FileFlags::Create) == FileFlags::Create)
-        .read((flags & FileFlags::Read) == FileFlags::Read)
-        .write((flags & FileFlags::Write) == FileFlags::Write)
-        .append((flags & FileFlags::Append) == FileFlags::Append)
-        .truncate((flags & FileFlags::Truncate) == FileFlags::Truncate)
+        .create_new((flags & OpenFlags::CreateNew) == OpenFlags::CreateNew)
+        .create((flags & OpenFlags::Create) == OpenFlags::Create)
+        .read((flags & OpenFlags::Read) == OpenFlags::Read)
+        .write((flags & OpenFlags::Write) == OpenFlags::Write)
+        .append((flags & OpenFlags::Append) == OpenFlags::Append)
+        .truncate((flags & OpenFlags::Truncate) == OpenFlags::Truncate)
         .open(path)
         .map_err(|err| panic!("Cannot open file: {path}: {err}."))
         .unwrap();
@@ -56,6 +56,6 @@ pub fn open(path: &str, flags: FileFlags) -> FileID {
 
 pub fn close(fid: FileID) {
     let raw_handle = fid as RawHandle;
-    let mut file = unsafe { File::from_raw_handle(raw_handle) };
+    let file = unsafe { File::from_raw_handle(raw_handle) };
     drop(file);
 }
