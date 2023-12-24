@@ -3,8 +3,21 @@ use crate::sys::{FileFlags, FileID};
 use std::os::windows::io::{AsRawHandle, FromRawHandle, RawHandle};
 use std::{
     fs::{File, OpenOptions},
-    io::Write,
+    io::{Read, Write},
 };
+
+pub fn read(fid: FileID, buf: &mut [u8]) -> u64 {
+    let raw_handle = fid as RawHandle;
+    let mut file = unsafe { File::from_raw_handle(raw_handle) };
+
+    let n = file
+        .read(buf)
+        .map_err(|err| panic!("Failed to read from file: {fid}: {err}."))
+        .unwrap();
+
+    std::mem::forget(file);
+    n as u64
+}
 
 pub fn write(fid: FileID, bytes_to_write: &[u8]) {
     let raw_handle = fid as RawHandle;

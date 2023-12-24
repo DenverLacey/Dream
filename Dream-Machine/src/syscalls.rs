@@ -6,7 +6,7 @@ use crate::vm::VM;
 #[repr(u16)]
 #[derive(Debug)]
 pub enum Syscall {
-    Read = 0,  // fid:FileID, buf:ptr, size:u64
+    Read = 0,  // fid:FileID, buf:ptr, size:u64 -> num_bytes_read:u64
     Write = 1, // fid:FileID, buf:ptr, size:u64
     Open = 2,  // path_ptr:ptr, path_len:u64, flags:FileFlags -> fid:FileID
     Close = 3, // fid:FileID
@@ -40,7 +40,13 @@ pub fn syscall2(vm: &mut VM) {
 pub fn syscall3(vm: &mut VM) {
     let syscall: Syscall = unsafe { std::mem::transmute(vm.reg.sri) };
     match syscall {
-        Syscall::Read => todo!(),
+        Syscall::Read => {
+            let fid = vm.reg.sr[0] as sys::FileID;
+            let buf = unsafe {
+                std::slice::from_raw_parts_mut(vm.reg.sr[1] as *mut u8, vm.reg.sr[2] as usize)
+            };
+            vm.reg.srr = sys::io::read(fid, buf);
+        }
         Syscall::Write => {
             let fid = vm.reg.sr[0] as sys::FileID;
             let bytes_to_write = unsafe {

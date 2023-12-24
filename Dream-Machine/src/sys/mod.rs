@@ -13,7 +13,7 @@ pub type FileID = u64;
 
 #[repr(u64)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum FileFlags {
+pub enum OpenFlags {
     None = 0x0,
     Read = 0x1,
     Write = 0x2,
@@ -23,7 +23,7 @@ pub enum FileFlags {
     CreateNew = 0x20,
 }
 
-impl std::ops::BitOr for FileFlags {
+impl std::ops::BitOr for OpenFlags {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self::Output {
         let s = self as u64;
@@ -32,7 +32,7 @@ impl std::ops::BitOr for FileFlags {
     }
 }
 
-impl std::ops::BitAnd for FileFlags {
+impl std::ops::BitAnd for OpenFlags {
     type Output = Self;
     fn bitand(self, rhs: Self) -> Self::Output {
         let s = self as u64;

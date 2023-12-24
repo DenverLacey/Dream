@@ -1,16 +1,29 @@
-use crate::sys::{FileFlags, FileID};
+use crate::sys::{FileID, OpenFlags};
 use std::{
     fs::{File, OpenOptions},
-    io::Write,
+    io::{Read, Write},
+    mem::ManuallyDrop,
     os::{
         fd::{AsRawFd, RawFd},
         unix::io::FromRawFd,
     },
 };
 
+pub fn read(fid: FileID, buf: &mut [u8]) -> u64 {
+    let raw_fd = fid as RawFd;
+    let mut file = ManuallyDrop::new(unsafe { File::from_raw_fd(raw_fd) });
+
+    let n = file
+        .read(buf)
+        .map_err(|err| panic!("Failed to read from file: {fid}: {err}."))
+        .unwrap();
+
+    n as u64
+}
+
 pub fn write(fid: FileID, bytes_to_write: &[u8]) {
     let raw_fd = fid as RawFd;
-    let mut file = unsafe { File::from_raw_fd(raw_fd) };
+    let mut file = ManuallyDrop::new(unsafe { File::from_raw_fd(raw_fd) });
 
     match file.write(bytes_to_write) {
         Ok(bytes_written) => {
@@ -20,26 +33,25 @@ pub fn write(fid: FileID, bytes_to_write: &[u8]) {
         }
         Err(err) => panic!("Failed to write to file: {fid}: {err}"),
     }
-
-    std::mem::forget(file);
 }
 
-pub fn open(path: &str, flags: FileFlags) -> FileID {
-    let file = OpenOptions::new()
-        .create_new((flags & FileFlags::CreateNew) == FileFlags::CreateNew)
-        .create((flags & FileFlags::Create) == FileFlags::Create)
-        .read((flags & FileFlags::Read) == FileFlags::Read)
-        .write((flags & FileFlags::Write) == FileFlags::Write)
-        .append((flags & FileFlags::Append) == FileFlags::Append)
-        .truncate((flags & FileFlags::Truncate) == FileFlags::Truncate)
-        .open(path)
-        .map_err(|err| panic!("Cannot open file: {path}: {err}."))
-        .unwrap();
+pub fn open(path: &str, flags: OpenFlags) -> FileID {
+    let file = ManuallyDrop::new(
+        OpenOptions::new()
+            .create_new((flags & OpenFlags::CreateNew) == OpenFlags::CreateNew)
+            .create((flags & OpenFlags::Create) == OpenFlags::Create)
+            .read((flags & OpenFlags::Read) == OpenFlags::Read)
+            .write((flags & OpenFlags::Write) == OpenFlags::Write)
+            .append((flags & OpenFlags::Append) == OpenFlags::Append)
+            .truncate((flags & OpenFlags::Truncate) == OpenFlags::Truncate)
+            .open(path)
+            .map_err(|err| panic!("Cannot open file: {path}: {err}."))
+            .unwrap(),
+    );
 
     let raw_fd = file.as_raw_fd();
     let fid = raw_fd as FileID;
 
-    std::mem::forget(file);
     fid
 }
 
