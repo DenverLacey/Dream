@@ -1,4 +1,6 @@
 const STACK_SIZE: usize = 4 * 1024;
+const NUM_SRX_REGISTERS: usize = 6;
+const NUM_8_BYTE_REGISTERS: usize = 32;
 
 #[derive(Debug, Default)]
 pub struct VM {
@@ -11,11 +13,9 @@ pub struct Registers {
     pub z: u8,
     pub sri: u16,
     pub srr: u64,
-    pub sr: [u64; 6],
+    pub sr: [u64; NUM_SRX_REGISTERS],
     pub gen: General,
 }
-
-const NUM_8_BYTE_REGISTERS: usize = 32;
 
 pub union General {
     b: [u8; NUM_8_BYTE_REGISTERS * 8],
