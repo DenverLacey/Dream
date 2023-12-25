@@ -19,7 +19,7 @@ pub enum RegisterPrefix {
     SReg = 0x20, // Syscall Registers.
     BReg = 0x40, // B-Registers.
     WReg = 0x80, // W-Registers.
-    DRef = 0xC0, // D-Registers.
+    DReg = 0xC0, // D-Registers.
     QReg = 0xE0, // Q-Registers.
 }
 
