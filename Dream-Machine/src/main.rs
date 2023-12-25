@@ -2,7 +2,7 @@ mod sys;
 mod syscalls;
 mod vm;
 
-use sys::{FileID, OpenFlags};
+use sys::{FileID, OpenFlags, STDOUT};
 use syscalls::*;
 use vm::*;
 
@@ -12,7 +12,7 @@ fn main() {
 
     {
         dvm.reg.sri = Syscall::Write as u16;
-        dvm.reg.sr[0] = 1;
+        dvm.reg.sr[0] = STDOUT;
 
         let msg = "Hello from the dream machine\n";
         let bytes = msg.as_bytes();
@@ -71,7 +71,7 @@ fn main() {
         let len = dvm.reg.srr;
 
         dvm.reg.sri = Syscall::Write as u16;
-        dvm.reg.sr[0] = 1;
+        dvm.reg.sr[0] = STDOUT;
         dvm.reg.sr[1] = buf.as_ptr() as u64;
         dvm.reg.sr[2] = len;
         syscall3(dvm);

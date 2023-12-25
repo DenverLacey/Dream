@@ -7,28 +7,25 @@ use std::{
     mem::ManuallyDrop,
 };
 
-use winapi::{
-    shared::minwindef::DWORD,
-    um::{
-        winbase::{STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE},
-        GetStdHandle,
-    },
+use winapi::um::{
+    processenv::GetStdHandle,
+    winbase::{STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE},
 };
 
 fn to_raw_handle(fid: FileID) -> RawHandle {
     match fid {
         BADFID => 0 as RawHandle,
-        STDIN => GetStdHandle(STD_INPUT_HANDLE),
-        STDOUT => GetStdHandle(STD_OUTPUT_HANDLE),
-        STDERR => GetStdHandle(STD_ERROR_HANDLE),
+        STDIN => unsafe { GetStdHandle(STD_INPUT_HANDLE) as RawHandle },
+        STDOUT => unsafe { GetStdHandle(STD_OUTPUT_HANDLE) as RawHandle },
+        STDERR => unsafe { GetStdHandle(STD_ERROR_HANDLE) as RawHandle },
         _ => fid as RawHandle,
     }
 }
 
 fn from_raw_handle(raw_handle: RawHandle) -> FileID {
-    let in_handle = GetStdHandle(STD_INPUT_HANDLE);
-    let out_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    let err_handle = GetStdHandle(STD_ERROR_HANDLE);
+    let in_handle = unsafe { GetStdHandle(STD_INPUT_HANDLE) as RawHandle };
+    let out_handle = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) as RawHandle };
+    let err_handle = unsafe { GetStdHandle(STD_ERROR_HANDLE) as RawHandle };
 
     if raw_handle == in_handle {
         STDIN
