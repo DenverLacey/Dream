@@ -17,10 +17,10 @@ pub enum Code {
 pub enum RegisterPrefix {
     XReg = 0x00, // Extra Special Purpose Registers e.g. the Z register.
     SReg = 0x20, // Syscall Registers.
-    BReg = 0x40, // B-Registers.
-    WReg = 0x80, // W-Registers.
-    DReg = 0xC0, // D-Registers.
-    QReg = 0xE0, // Q-Registers.
+    BReg = 0x40, // B-Registers. Requires second byte for index.
+    WReg = 0x80, // W-Registers. Requires second byte for index.
+    DReg = 0xC0, // D-Registers. Index stored in lower 5 bits.
+    QReg = 0xE0, // Q-Registers. Index stored in lower 5 bits.
 }
 
 pub const REGISTER_PREFIX_MASK: u8 = 0xE0;
