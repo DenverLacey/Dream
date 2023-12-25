@@ -1,4 +1,4 @@
-use crate::sys::{FileID, OpenFlags};
+use crate::sys::{FileID, OpenFlags, STDERR};
 use std::{
     fs::{File, OpenOptions},
     io::{Read, Write},
@@ -9,8 +9,24 @@ use std::{
     },
 };
 
+fn to_raw_fd(fid: FileID) -> RawFd {
+    if fid <= STDERR {
+        fid.wrapping_sub(1) as RawFd
+    } else {
+        fid as RawFd
+    }
+}
+
+fn from_raw_fd(fd: RawFd) -> FileID {
+    if fd <= 2 {
+        (fd + 1) as FileID
+    } else {
+        fd as FileID
+    }
+}
+
 pub fn read(fid: FileID, buf: &mut [u8]) -> u64 {
-    let raw_fd = fid as RawFd;
+    let raw_fd = to_raw_fd(fid);
     let mut file = ManuallyDrop::new(unsafe { File::from_raw_fd(raw_fd) });
 
     let n = file
@@ -22,7 +38,7 @@ pub fn read(fid: FileID, buf: &mut [u8]) -> u64 {
 }
 
 pub fn write(fid: FileID, bytes_to_write: &[u8]) {
-    let raw_fd = fid as RawFd;
+    let raw_fd = to_raw_fd(fid);
     let mut file = ManuallyDrop::new(unsafe { File::from_raw_fd(raw_fd) });
 
     match file.write(bytes_to_write) {
@@ -50,13 +66,13 @@ pub fn open(path: &str, flags: OpenFlags) -> FileID {
     );
 
     let raw_fd = file.as_raw_fd();
-    let fid = raw_fd as FileID;
+    let fid = from_raw_fd(raw_fd);
 
     fid
 }
 
 pub fn close(fid: FileID) {
-    let raw_fd = fid as RawFd;
+    let raw_fd = to_raw_fd(fid);
     let file = unsafe { File::from_raw_fd(raw_fd) };
     drop(file);
 }

@@ -10,6 +10,10 @@ pub use crate::sys::unix::*;
 pub use crate::sys::windows::*;
 
 pub type FileID = u64;
+pub const BADFID: FileID = 0;
+pub const STDIN: FileID = 1;
+pub const STDOUT: FileID = 2;
+pub const STDERR: FileID = 3;
 
 #[repr(u64)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
