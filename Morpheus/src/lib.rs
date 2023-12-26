@@ -1,10 +1,14 @@
+mod builder;
+mod errors;
+mod version;
+
+pub use builder::*;
+pub use errors::*;
+pub use version::*;
+
 use quicksand::REGISTER_SRX;
 
-pub enum Error {
-    SRXOutOfBounds,
-}
-
-pub const fn srx(x: u8) -> Result<u8, Error> {
+pub const fn srx(x: u8) -> Result<u8> {
     if x < 6 {
         Ok(REGISTER_SRX | x)
     } else {
