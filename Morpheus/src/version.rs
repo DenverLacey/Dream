@@ -7,7 +7,15 @@ pub const MAX_VERSION_NUMBER: u32 = (VERSION_BASE * VERSION_BASE * VERSION_BASE 
 pub struct Version(pub(crate) u32);
 
 impl Version {
-    pub const fn new(number: u32) -> Result<Self> {
+    pub fn from(number: u32) -> Self {
+        if number <= MAX_VERSION_NUMBER {
+            Self(number)
+        } else {
+            panic!("Version out of bounds! {number} is bigger than maximum {MAX_VERSION_NUMBER}.");
+        }
+    }
+
+    pub const fn try_from(number: u32) -> Result<Self> {
         if number <= MAX_VERSION_NUMBER {
             Ok(Self(number))
         } else {
@@ -38,28 +46,28 @@ mod tests {
 
     #[test]
     fn encode_v000() {
-        let version = Version::new(0).unwrap();
+        let version = Version::from(0);
         let bytes = version.as_bytes();
         assert_eq!(&bytes, b"000");
     }
 
     #[test]
     fn encode_v001() {
-        let version = Version::new(1).unwrap();
+        let version = Version::from(1);
         let bytes = version.as_bytes();
         assert_eq!(&bytes, b"001");
     }
 
     #[test]
     fn encode_v00A() {
-        let version = Version::new(10).unwrap();
+        let version = Version::from(10);
         let bytes = version.as_bytes();
         assert_eq!(&bytes, b"00A");
     }
 
     #[test]
     fn encode_max() {
-        let version = Version::new(MAX_VERSION_NUMBER).unwrap();
+        let version = Version::from(MAX_VERSION_NUMBER);
         let bytes = version.as_bytes();
         assert_eq!(&bytes, b"///");
     }
