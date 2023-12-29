@@ -6,18 +6,71 @@ use std::io::Write as _;
 #[derive(Default)]
 pub struct Builder {
     version: Version,
+    strings: Vec<Box<[u8]>>,
 }
 
 impl Builder {
     pub fn new(version: Version) -> Self {
-        Self { version }
+        Self {
+            version,
+            strings: vec![],
+        }
     }
+
+    pub fn add_string(&mut self, new: impl AsRef<[u8]>) -> usize {
+        if let Some(idx) = self.strings.iter().position(|s| s.as_ref() == new.as_ref()) {
+            idx
+        } else {
+            self.strings.push(Box::from(new.as_ref()));
+            self.strings.len() - 1
+        }
+    }
+
+    pub fn add_strings<S, I>(&mut self, strings: S)
+    where
+        S: IntoIterator<Item = I>,
+        I: AsRef<[u8]>,
+    {
+        strings.into_iter().map(|s| self.add_string(s)).consume();
+    }
+}
+
+impl Builder {
+    const PADDING: usize = 8;
 
     fn write_magic(&self, f: &mut dyn Write) -> Result<()> {
         let version = self.version.as_bytes();
         f.write_str("DREAM")?;
         f.write_bytes(&version)?;
         Ok(())
+    }
+
+    fn write_text_section(&self, f: &mut dyn Write) -> Result<usize> {
+        let mut text_size = 0;
+
+        let strings_size: usize = self
+            .strings
+            .iter()
+            .map(|s| {
+                let padding = Self::PADDING - s.len() % Self::PADDING;
+                std::mem::size_of::<usize>() + s.len() + padding
+            })
+            .sum();
+
+        text_size += f.write_str("TEXT")?;
+        text_size += f.write_bytes(&strings_size.to_le_bytes())?;
+        text_size += f.pad(4)?;
+
+        for s in self.strings.iter() {
+            text_size += f.write_bytes(&s.len().to_le_bytes())?;
+            text_size += f.write_bytes(s.as_ref())?;
+
+            let s_len = s.len();
+            let padding = Self::PADDING - s_len % Self::PADDING;
+            text_size += f.pad(padding)?;
+        }
+
+        Ok(text_size)
     }
 }
 
@@ -32,6 +85,13 @@ pub trait Write {
         let mut buf = [0u8; 4];
         let c_str = c.encode_utf8(&mut buf);
         self.write_str(c_str)
+    }
+
+    fn pad(&mut self, nbytes: usize) -> Result<usize> {
+        for _ in 0..nbytes {
+            self.write_bytes(&[0])?;
+        }
+        Ok(nbytes)
     }
 }
 
@@ -60,6 +120,19 @@ impl Write for String {
     }
 }
 
+trait IteratorExt: Iterator {
+    fn consume(&mut self) {
+        loop {
+            let n = self.next();
+            if n.is_none() {
+                break;
+            }
+        }
+    }
+}
+
+impl<I: Iterator> IteratorExt for I {}
+
 #[cfg(test)]
 mod tests {
     use std::fs::File;
@@ -78,8 +151,18 @@ mod tests {
     #[test]
     fn write_magic_to_file() {
         let builder = Builder::new(Version::from(87));
-        let mut file = File::create("test_write_magic.txt").unwrap();
+        let mut file = File::create("tests/test_write_magic.bin").unwrap();
         let result = builder.write_magic(&mut file);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn write_text_section() {
+        let mut builder = Builder::new(Version::from(0));
+        let mut output = File::create("tests/test_write_text_section.bin").unwrap();
+
+        builder.add_strings(["hello", "world!", ""]);
+        let result = builder.write_text_section(&mut output);
         assert!(result.is_ok());
     }
 }
