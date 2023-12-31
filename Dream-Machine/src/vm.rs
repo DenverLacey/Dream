@@ -1,5 +1,5 @@
 const STACK_SIZE: usize = 4 * 1024;
-const NUM_SRX_REGISTERS: usize = 6;
+const NUM_RSX_REGISTERS: usize = 6;
 const NUM_REGISTERS_PER_SIZE: usize = 32;
 
 #[derive(Debug, Default)]
@@ -11,10 +11,10 @@ pub struct VM {
 #[derive(Debug, Default)]
 pub struct Registers {
     pub z: u8,
-    pub sri: u16,
-    pub srr: u64,
-    pub sr: [u64; NUM_SRX_REGISTERS],
-    pub gen: General,
+    pub rsi: u16,
+    pub rsr: u64,
+    pub rs: [u64; NUM_RSX_REGISTERS],
+    pub r: General,
 }
 
 #[repr(packed)]
