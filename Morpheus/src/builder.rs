@@ -2,8 +2,6 @@ use crate::errors::{Error, Result};
 use crate::version::Version;
 
 use std::io::Write as _;
-
-#[derive(Default)]
 pub struct Builder {
     version: Version,
     strings: Vec<Box<[u8]>>,
@@ -18,20 +16,15 @@ impl Builder {
     }
 
     pub fn add_string(&mut self, new: impl AsRef<[u8]>) -> usize {
-        if let Some(idx) = self.strings.iter().position(|s| s.as_ref() == new.as_ref()) {
-            idx
-        } else {
-            self.strings.push(Box::from(new.as_ref()));
-            self.strings.len() - 1
+        let mut offset = 0;
+        for s in self.strings.iter() {
+            if s.as_ref() == new.as_ref() {
+                return offset;
+            }
+            offset += std::mem::size_of::<usize>() + s.len() + Self::PADDING;
         }
-    }
-
-    pub fn add_strings<S, I>(&mut self, strings: S)
-    where
-        S: IntoIterator<Item = I>,
-        I: AsRef<[u8]>,
-    {
-        strings.into_iter().map(|s| self.add_string(s)).consume();
+        self.strings.push(Box::from(new.as_ref()));
+        offset
     }
 }
 
@@ -39,9 +32,8 @@ impl Builder {
     const PADDING: usize = 8;
 
     fn write_magic(&self, f: &mut dyn Write) -> Result<()> {
-        let version = self.version.as_bytes();
         f.write_str("DREAM")?;
-        f.write_bytes(&version)?;
+        f.write_bytes(&self.version.as_bytes())?;
         Ok(())
     }
 
@@ -51,10 +43,7 @@ impl Builder {
         let strings_size: usize = self
             .strings
             .iter()
-            .map(|s| {
-                let padding = Self::PADDING - s.len() % Self::PADDING;
-                std::mem::size_of::<usize>() + s.len() + padding
-            })
+            .map(|s| std::mem::size_of::<usize>() + s.len() + Self::PADDING)
             .sum();
 
         text_size += f.write_str("TEXT")?;
@@ -64,10 +53,7 @@ impl Builder {
         for s in self.strings.iter() {
             text_size += f.write_bytes(&s.len().to_le_bytes())?;
             text_size += f.write_bytes(s.as_ref())?;
-
-            let s_len = s.len();
-            let padding = Self::PADDING - s_len % Self::PADDING;
-            text_size += f.pad(padding)?;
+            text_size += f.write_bytes(&[0; Self::PADDING])?;
         }
 
         Ok(text_size)
@@ -161,7 +147,10 @@ mod tests {
         let mut builder = Builder::new(Version::from(0));
         let mut output = File::create("tests/test_write_text_section.bin").unwrap();
 
-        builder.add_strings(["hello", "world!", ""]);
+        builder.add_string("hello");
+        builder.add_string("world!");
+        builder.add_string("");
+
         let result = builder.write_text_section(&mut output);
         assert!(result.is_ok());
     }

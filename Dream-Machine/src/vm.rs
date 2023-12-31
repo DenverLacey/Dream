@@ -1,6 +1,6 @@
 const STACK_SIZE: usize = 4 * 1024;
 const NUM_SRX_REGISTERS: usize = 6;
-const NUM_8_BYTE_REGISTERS: usize = 32;
+const NUM_REGISTERS_PER_SIZE: usize = 32;
 
 #[derive(Debug, Default)]
 pub struct VM {
@@ -17,17 +17,21 @@ pub struct Registers {
     pub gen: General,
 }
 
-pub union General {
-    b: [u8; NUM_8_BYTE_REGISTERS * 8],
-    w: [u16; NUM_8_BYTE_REGISTERS * 4],
-    d: [u32; NUM_8_BYTE_REGISTERS * 2],
-    q: [u64; NUM_8_BYTE_REGISTERS * 1],
+#[repr(packed)]
+pub struct General {
+    b: [u8; NUM_REGISTERS_PER_SIZE],
+    w: [u16; NUM_REGISTERS_PER_SIZE],
+    d: [u32; NUM_REGISTERS_PER_SIZE],
+    q: [u64; NUM_REGISTERS_PER_SIZE],
 }
 
 impl std::default::Default for General {
     fn default() -> Self {
         Self {
-            q: [0; NUM_8_BYTE_REGISTERS],
+            b: [0; NUM_REGISTERS_PER_SIZE],
+            w: [0; NUM_REGISTERS_PER_SIZE],
+            d: [0; NUM_REGISTERS_PER_SIZE],
+            q: [0; NUM_REGISTERS_PER_SIZE],
         }
     }
 }

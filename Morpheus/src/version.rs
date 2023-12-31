@@ -3,7 +3,7 @@ use crate::errors::{Error, Result};
 const VERSION_BASE: usize = 64;
 pub const MAX_VERSION_NUMBER: u32 = (VERSION_BASE * VERSION_BASE * VERSION_BASE - 1) as u32;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Version(pub(crate) u32);
 
 impl Version {

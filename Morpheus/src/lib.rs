@@ -6,13 +6,21 @@ pub use builder::*;
 pub use errors::*;
 pub use version::*;
 
-use quicksand::REGISTER_SRX;
+use quicksand::{RegisterType, REGISTER_SRX};
 
 pub const fn srx(x: u8) -> Result<u8> {
     if x < 6 {
         Ok(REGISTER_SRX | x)
     } else {
-        Err(Error::SRXOutOfBounds)
+        Err(Error::InvalidRegisterIndex)
+    }
+}
+
+pub const fn gpr(reg_type: RegisterType, x: u8) -> Result<u8> {
+    if x < 32 {
+        Ok(reg_type as u8 | x)
+    } else {
+        Err(Error::InvalidRegisterIndex)
     }
 }
 
@@ -63,6 +71,18 @@ mod tests {
     #[test]
     fn sr6() {
         let result = srx(6);
-        assert!(matches!(result, Err(Error::SRXOutOfBounds)));
+        assert!(matches!(result, Err(Error::InvalidRegisterIndex)));
+    }
+
+    #[test]
+    fn br0() {
+        let result = gpr(RegisterType::B, 0);
+        assert!(matches!(result, Ok(0x40)));
+    }
+
+    #[test]
+    fn br31() {
+        let result = gpr(RegisterType::B, 31);
+        assert!(matches!(result, Ok(0x5F)));
     }
 }

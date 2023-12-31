@@ -14,11 +14,12 @@ pub enum Instruction {
 }
 
 #[repr(u8)]
-pub enum RegisterPrefix {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RegisterType {
     X = 0x00, // Extra Special Purpose Registers e.g. the Z register.
     S = 0x20, // Syscall Registers.
-    B = 0x40, // B-Registers. Requires second byte for index.
-    W = 0x80, // W-Registers. Requires second byte for index.
+    B = 0x40, // B-Registers. Index stored in lower 5 bits.
+    W = 0x80, // W-Registers. Index stored in lower 5 bits.
     D = 0xC0, // D-Registers. Index stored in lower 5 bits.
     Q = 0xE0, // Q-Registers. Index stored in lower 5 bits.
 }
@@ -26,16 +27,17 @@ pub enum RegisterPrefix {
 pub const REGISTER_PREFIX_MASK: u8 = 0xE0;
 
 #[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SyscallRegisterPrefix {
     SRI = 0x08, // SRI Register: The Syscall Index register used to specify syscall to execute.
     SRR = 0x10, // SRR Register: The Syscall Return register used to store return value of syscall.
     SRX = 0x00, // SR-Registers: The registers used to pass arguments to syscalls.
 }
 
-pub const REGISTER_Z: u8 = RegisterPrefix::X as u8 | 0x00;
-pub const REGISTER_SRI: u8 = RegisterPrefix::S as u8 | SyscallRegisterPrefix::SRI as u8;
-pub const REGISTER_SRR: u8 = RegisterPrefix::S as u8 | SyscallRegisterPrefix::SRR as u8;
-pub const REGISTER_SRX: u8 = RegisterPrefix::S as u8 | SyscallRegisterPrefix::SRX as u8;
+pub const REGISTER_Z: u8 = RegisterType::X as u8 | 0x00;
+pub const REGISTER_SRI: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::SRI as u8;
+pub const REGISTER_SRR: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::SRR as u8;
+pub const REGISTER_SRX: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::SRX as u8;
 pub const REGISTER_SR0: u8 = REGISTER_SRX | 0;
 pub const REGISTER_SR1: u8 = REGISTER_SRX | 1;
 pub const REGISTER_SR2: u8 = REGISTER_SRX | 2;
