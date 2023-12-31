@@ -24,7 +24,7 @@ fn main() {
     }
 
     {
-        let path = "test.txt";
+        let path = "tests/test.txt";
         let path_bytes = path.as_bytes();
 
         dvm.reg.rsi = Syscall::Open as u16;
@@ -49,7 +49,7 @@ fn main() {
     }
 
     {
-        let path = "test.txt";
+        let path = "tests/test.txt";
         let path_bytes = path.as_bytes();
 
         dvm.reg.rsi = Syscall::Open as u16;

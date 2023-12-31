@@ -1,4 +1,4 @@
-use crate::sys::{FileID, OpenFlags, STDERR};
+use crate::sys::{FileID, OpenFlags};
 use std::{
     fs::{File, OpenOptions},
     io::{Read, Write},
@@ -10,19 +10,11 @@ use std::{
 };
 
 fn to_raw_fd(fid: FileID) -> RawFd {
-    if fid <= STDERR {
-        fid.wrapping_sub(1) as RawFd
-    } else {
-        fid as RawFd
-    }
+    fid.wrapping_sub(1) as RawFd
 }
 
 fn from_raw_fd(fd: RawFd) -> FileID {
-    if fd <= 2 {
-        (fd + 1) as FileID
-    } else {
-        fd as FileID
-    }
+    fd.wrapping_add(1) as FileID
 }
 
 pub fn read(fid: FileID, buf: &mut [u8]) -> u64 {
