@@ -1,18 +1,26 @@
-use crate::errors::{Error, Result};
+use super::{proc_builder::ProcedureBuilder, Write};
+use crate::errors::Result;
 use crate::version::Version;
 
-use std::io::Write as _;
 pub struct Builder {
     version: Version,
+    entry_point: usize,
     strings: Vec<Box<[u8]>>,
+    code: Vec<u8>,
 }
 
 impl Builder {
     pub fn new(version: Version) -> Self {
         Self {
             version,
+            entry_point: 0,
             strings: vec![],
+            code: vec![],
         }
+    }
+
+    pub fn set_entry(&mut self, entry: usize) {
+        self.entry_point = entry;
     }
 
     pub fn add_string(&mut self, new: impl AsRef<[u8]>) -> usize {
@@ -25,6 +33,15 @@ impl Builder {
         }
         self.strings.push(Box::from(new.as_ref()));
         offset
+    }
+
+    pub fn procedure(&mut self, mut f: impl FnMut(&mut ProcedureBuilder)) -> usize {
+        let proc_begin = self.code.len();
+
+        let mut proc = ProcedureBuilder::new(&mut self.code);
+        f(&mut proc);
+
+        proc_begin
     }
 }
 
@@ -60,68 +77,13 @@ impl Builder {
     }
 }
 
-pub trait Write {
-    fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize>;
-
-    fn write_str(&mut self, s: &str) -> Result<usize> {
-        self.write_bytes(s.as_bytes())
-    }
-
-    fn write_chr(&mut self, c: char) -> Result<usize> {
-        let mut buf = [0u8; 4];
-        let c_str = c.encode_utf8(&mut buf);
-        self.write_str(c_str)
-    }
-
-    fn pad(&mut self, nbytes: usize) -> Result<usize> {
-        for _ in 0..nbytes {
-            self.write_bytes(&[0])?;
-        }
-        Ok(nbytes)
-    }
-}
-
-macro_rules! impl_io_write {
-    ($t:ty) => {
-        impl $crate::builder::Write for $t {
-            fn write_bytes(&mut self, bytes: &[u8]) -> $crate::errors::Result<usize> {
-                self.write_all(bytes)
-                    .map_err(|_| $crate::errors::Error::WriteError)?;
-                Ok(bytes.len())
-            }
-        }
-    };
-}
-
-impl_io_write!(std::fs::File);
-impl_io_write!(std::io::Cursor<&mut Vec<u8>>);
-impl_io_write!(std::io::Stdout);
-impl_io_write!(std::io::Stderr);
-
-impl Write for String {
-    fn write_bytes(&mut self, bytes: &[u8]) -> Result<usize> {
-        let s = std::str::from_utf8(bytes).map_err(|_| Error::WriteError)?;
-        self.push_str(s);
-        Ok(bytes.len())
-    }
-}
-
-trait IteratorExt: Iterator {
-    fn consume(&mut self) {
-        loop {
-            let n = self.next();
-            if n.is_none() {
-                break;
-            }
-        }
-    }
-}
-
-impl<I: Iterator> IteratorExt for I {}
-
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
+    use std::{fs::File, io::Read};
+
+    use quicksand::RegisterType;
+
+    use crate::Operand;
 
     use super::*;
 
@@ -153,5 +115,25 @@ mod tests {
 
         let result = builder.write_text_section(&mut output);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn write_procedure() {
+        let mut builder = Builder::new(Version::from(0));
+        let mut output = File::create("tests/test_write_procedure.bin").unwrap();
+
+        builder.procedure(|proc| {
+            proc.block(|block| {
+                block
+                    .emit_move(
+                        Operand::gpr(RegisterType::Q, 0).unwrap(),
+                        Operand::lit64(69),
+                        None,
+                    )
+                    .unwrap();
+            })
+        });
+
+        output.write_bytes(&builder.code).unwrap();
     }
 }

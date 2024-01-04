@@ -1,22 +1,31 @@
 #[repr(u8)]
 pub enum Instruction {
-    NOP = 0x00, // No-Op: Does nothing.
-
-    LDB = 0x01, // Load B-Register: Loads 1 byte into a B-Register.
-    LDW = 0x02, // Load W-Register: Loads 2 bytes into a W-Register.
-    LDD = 0x03, // Load D-Register: Loads 4 bytes into a D-Register.
-    LDQ = 0x04, // Load Q-Register: Loads 8 bytes into a Q-Register.
-
-    PUSH = 0x10, // Push: Push a value onto the stack.
-    POP = 0x11,  // Pop: Pop a value from the stack and copy into a register.
-
-    MAX = 0x7F, // This is the maximum value for an instruction. The top-most bit is reserved.
+    NoOp = 0x00,     // Does nothing.
+    Move = 0x01,     // Move a value into a register.
+    MoveImm = 0x02,  // Move an immediate value into a register.
+    MoveAddr = 0x03, // Move a value into a register via an address.
+    Clear = 0x04,    // Set a register to zero.
+    Set = 0x05,      // Set a register to one.
+    Push = 0x06,     // Push a value onto the stack.
+    PushImm = 0x07,  // Push an immediate value onto the stack.
+    Pop = 0x08,      // Pop a value from the stack and copy into a register.
+    Syscall0 = 0x10, // Perform syscall with 0 arguments.
+    Syscall1 = 0x11, // Perform syscall with 1 argument.
+    Syscall2 = 0x12, // Perform syscall with 2 arguments.
+    Syscall3 = 0x13, // Perform syscall with 3 arguments.
+    Syscall4 = 0x14, // Perform syscall with 4 arguments.
+    Syscall5 = 0x15, // Perform syscall with 5 arguments.
+    Syscall6 = 0x16, // Perform syscall with 6 arguments.
+    Ret = 0x20,      // Returns from the current procedure.
+    MAX = 0x7F,      // This is the maximum value for an instruction. The top-most bit is reserved.
 }
+
+pub const INST_ALT_MODE: u8 = 0x80;
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ArgumentType {
-    Lit32 = 0b00,
+pub enum OperandType {
+    // Lit32 = 0b00,  NOTE: Removing this to allow for zero to mean None.
     Register = 0b01,
     Address = 0b10,
     Lit64 = 0b11,
@@ -25,76 +34,82 @@ pub enum ArgumentType {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InstructionSignature(u8);
 
+impl InstructionSignature {
+    pub const fn as_u8(self) -> u8 {
+        self.0
+    }
+}
+
 impl Instruction {
-    pub const fn sig1(arg1: ArgumentType) -> InstructionSignature {
-        InstructionSignature(arg1 as u8)
+    pub const fn sig1(op1: OperandType) -> InstructionSignature {
+        InstructionSignature(op1 as u8)
     }
 
-    pub const fn sig2(arg1: ArgumentType, arg2: ArgumentType) -> InstructionSignature {
-        let arg1 = arg1 as u8;
-        let arg2 = arg2 as u8;
-        InstructionSignature((arg2 << 2) | arg1)
+    pub const fn sig2(op1: OperandType, op2: OperandType) -> InstructionSignature {
+        let op1 = op1 as u8;
+        let op2 = op2 as u8;
+        InstructionSignature((op2 << 2) | op1)
     }
 
     pub const fn sig3(
-        arg1: ArgumentType,
-        arg2: ArgumentType,
-        arg3: ArgumentType,
+        op1: OperandType,
+        op2: OperandType,
+        op3: OperandType,
     ) -> InstructionSignature {
-        let arg1 = arg1 as u8;
-        let arg2 = arg2 as u8;
-        let arg3 = arg3 as u8;
-        InstructionSignature((arg3 << 4) | (arg2 << 2) | arg1)
+        let op1 = op1 as u8;
+        let op2 = op2 as u8;
+        let op3 = op3 as u8;
+        InstructionSignature((op3 << 4) | (op2 << 2) | op1)
     }
 
     pub const fn sig4(
-        arg1: ArgumentType,
-        arg2: ArgumentType,
-        arg3: ArgumentType,
-        arg4: ArgumentType,
+        op1: OperandType,
+        op2: OperandType,
+        op3: OperandType,
+        op4: OperandType,
     ) -> InstructionSignature {
-        let arg1 = arg1 as u8;
-        let arg2 = arg2 as u8;
-        let arg3 = arg3 as u8;
-        let arg4 = arg4 as u8;
-        InstructionSignature((arg4 << 6) | (arg3 << 4) | (arg2 << 2) | arg1)
+        let op1 = op1 as u8;
+        let op2 = op2 as u8;
+        let op3 = op3 as u8;
+        let op4 = op4 as u8;
+        InstructionSignature((op4 << 6) | (op3 << 4) | (op2 << 2) | op1)
     }
 }
 
 #[macro_export]
 macro_rules! inst_sig {
-    ($arg1:expr $(,)?) => {
-        $crate::Instruction::sig1($arg1)
+    ($op1:expr $(,)?) => {
+        $crate::Instruction::sig1($op1)
     };
-    ($arg1:expr, $arg2:expr $(,)?) => {
-        $crate::Instruction::sig2($arg1, $arg2)
+    ($op1:expr, $op2:expr $(,)?) => {
+        $crate::Instruction::sig2($op1, $op2)
     };
-    ($arg1:expr, $arg2:expr, $arg3:expr $(,)?) => {
-        $crate::Instruction::sig3($arg1, $arg2, $arg3)
+    ($op1:expr, $op2:expr, $op3:expr $(,)?) => {
+        $crate::Instruction::sig3($op1, $op2, $op3)
     };
-    ($arg1:expr, $arg2:expr, $arg3:expr, $arg4:expr $(,)?) => {
-        $crate::Instruction::sig4($arg1, $arg2, $arg3, $arg4)
+    ($op1:expr, $op2:expr, $op3:expr, $op4:expr $(,)?) => {
+        $crate::Instruction::sig4($op1, $op2, $op3, $op4)
     };
 }
 
 impl InstructionSignature {
-    pub fn fst(self) -> ArgumentType {
+    pub fn fst(self) -> OperandType {
         unsafe { std::mem::transmute(self.0 & 0x03) }
     }
 
-    pub fn snd(self) -> ArgumentType {
+    pub fn snd(self) -> OperandType {
         unsafe { std::mem::transmute((self.0 & 0x0C) >> 2) }
     }
 
-    pub fn thd(self) -> ArgumentType {
+    pub fn thd(self) -> OperandType {
         unsafe { std::mem::transmute((self.0 & 0x30) >> 4) }
     }
 
-    pub fn frth(self) -> ArgumentType {
+    pub fn frth(self) -> OperandType {
         unsafe { std::mem::transmute((self.0 & 0xC0) >> 6) }
     }
 
-    pub fn get(self, index: usize) -> ArgumentType {
+    pub fn get(self, index: usize) -> OperandType {
         assert!(index < 4);
         let shift = (index as u8) * 2;
         unsafe { std::mem::transmute((self.0 >> shift) & 0x03) }
@@ -107,22 +122,22 @@ mod tests {
 
     #[test]
     fn sig1() {
-        let sig = Instruction::sig1(ArgumentType::Address);
+        let sig = Instruction::sig1(OperandType::Address);
         assert_eq!(sig, InstructionSignature(0b00000010));
     }
 
     #[test]
     fn sig2() {
-        let sig = Instruction::sig2(ArgumentType::Address, ArgumentType::Address);
+        let sig = Instruction::sig2(OperandType::Address, OperandType::Address);
         assert_eq!(sig, InstructionSignature(0b00001010));
     }
 
     #[test]
     fn sig3() {
         let sig = Instruction::sig3(
-            ArgumentType::Address,
-            ArgumentType::Address,
-            ArgumentType::Address,
+            OperandType::Address,
+            OperandType::Address,
+            OperandType::Address,
         );
         assert_eq!(sig, InstructionSignature(0b00101010));
     }
@@ -130,28 +145,28 @@ mod tests {
     #[test]
     fn sig4() {
         let sig = Instruction::sig4(
-            ArgumentType::Address,
-            ArgumentType::Address,
-            ArgumentType::Address,
-            ArgumentType::Address,
+            OperandType::Address,
+            OperandType::Address,
+            OperandType::Address,
+            OperandType::Address,
         );
         assert_eq!(sig, InstructionSignature(0b10101010));
     }
 
     #[test]
     fn sig_macro() {
-        let sig1 = inst_sig!(ArgumentType::Address);
-        let sig2 = inst_sig!(ArgumentType::Address, ArgumentType::Address);
+        let sig1 = inst_sig!(OperandType::Address);
+        let sig2 = inst_sig!(OperandType::Address, OperandType::Address);
         let sig3 = inst_sig!(
-            ArgumentType::Address,
-            ArgumentType::Address,
-            ArgumentType::Address
+            OperandType::Address,
+            OperandType::Address,
+            OperandType::Address
         );
         let sig4 = inst_sig!(
-            ArgumentType::Address,
-            ArgumentType::Address,
-            ArgumentType::Address,
-            ArgumentType::Address,
+            OperandType::Address,
+            OperandType::Address,
+            OperandType::Address,
+            OperandType::Address,
         );
 
         assert_eq!(sig1, InstructionSignature(0b00000010));
@@ -163,58 +178,58 @@ mod tests {
     #[test]
     fn fst() {
         let sig = inst_sig!(
-            ArgumentType::Lit32,
-            ArgumentType::Register,
-            ArgumentType::Address,
-            ArgumentType::Lit64
+            OperandType::Lit64,
+            OperandType::Register,
+            OperandType::Address,
+            OperandType::Lit64
         );
-        assert_eq!(sig.fst(), ArgumentType::Lit32);
+        assert_eq!(sig.fst(), OperandType::Lit64);
     }
 
     #[test]
     fn snd() {
         let sig = inst_sig!(
-            ArgumentType::Lit32,
-            ArgumentType::Register,
-            ArgumentType::Address,
-            ArgumentType::Lit64
+            OperandType::Lit64,
+            OperandType::Register,
+            OperandType::Address,
+            OperandType::Lit64
         );
-        assert_eq!(sig.snd(), ArgumentType::Register);
+        assert_eq!(sig.snd(), OperandType::Register);
     }
 
     #[test]
     fn thd() {
         let sig = inst_sig!(
-            ArgumentType::Lit32,
-            ArgumentType::Register,
-            ArgumentType::Address,
-            ArgumentType::Lit64
+            OperandType::Lit64,
+            OperandType::Register,
+            OperandType::Address,
+            OperandType::Lit64
         );
-        assert_eq!(sig.thd(), ArgumentType::Address);
+        assert_eq!(sig.thd(), OperandType::Address);
     }
 
     #[test]
     fn frth() {
         let sig = inst_sig!(
-            ArgumentType::Lit32,
-            ArgumentType::Register,
-            ArgumentType::Address,
-            ArgumentType::Lit64
+            OperandType::Lit64,
+            OperandType::Register,
+            OperandType::Address,
+            OperandType::Lit64
         );
-        assert_eq!(sig.frth(), ArgumentType::Lit64);
+        assert_eq!(sig.frth(), OperandType::Lit64);
     }
 
     #[test]
     fn get() {
         let sig = inst_sig!(
-            ArgumentType::Lit32,
-            ArgumentType::Register,
-            ArgumentType::Address,
-            ArgumentType::Lit64
+            OperandType::Lit64,
+            OperandType::Register,
+            OperandType::Address,
+            OperandType::Lit64
         );
-        assert_eq!(sig.get(0), ArgumentType::Lit32);
-        assert_eq!(sig.get(1), ArgumentType::Register);
-        assert_eq!(sig.get(2), ArgumentType::Address);
-        assert_eq!(sig.get(3), ArgumentType::Lit64);
+        assert_eq!(sig.get(0), OperandType::Lit64);
+        assert_eq!(sig.get(1), OperandType::Register);
+        assert_eq!(sig.get(2), OperandType::Address);
+        assert_eq!(sig.get(3), OperandType::Lit64);
     }
 }
