@@ -1,3 +1,5 @@
+use quicksand::Instruction;
+
 use super::block_builder::BlockBuilder;
 
 pub struct ProcedureBuilder<'out> {
@@ -9,9 +11,18 @@ impl<'out> ProcedureBuilder<'out> {
         Self { out }
     }
 
-    pub fn block(&mut self, mut f: impl FnMut(&mut BlockBuilder)) {
-        let mut block = BlockBuilder::new(self.out);
-        f(&mut block);
-        block.emit_ret();
+    pub fn body(&mut self, f: impl FnOnce(&mut BlockBuilder)) {
+        {
+            let mut block = BlockBuilder::new(self.out);
+            f(&mut block);
+        }
+        if self
+            .out
+            .last()
+            .filter(|&&l| l == Instruction::Ret as u8)
+            .is_none()
+        {
+            self.out.push(Instruction::Ret as u8);
+        }
     }
 }

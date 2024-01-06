@@ -5,6 +5,7 @@ pub enum Error {
     WriteError,
     BadOperandType,
     BadOperandValue,
+    TooManyArgsForSyscall,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

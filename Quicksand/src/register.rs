@@ -21,30 +21,39 @@ pub enum SyscallRegisterPrefix {
     RSX = 0x00, // RSX-Registers: The registers used to pass arguments to syscalls.
 }
 
-pub const REGISTER_Z: u8 = RegisterType::X as u8 | 0x00;
-pub const REGISTER_RSI: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::RSI as u8;
-pub const REGISTER_RSR: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::RSR as u8;
-pub const REGISTER_RSX: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::RSX as u8;
-pub const REGISTER_RS0: u8 = REGISTER_RSX | 0;
-pub const REGISTER_RS1: u8 = REGISTER_RSX | 1;
-pub const REGISTER_RS2: u8 = REGISTER_RSX | 2;
-pub const REGISTER_RS3: u8 = REGISTER_RSX | 3;
-pub const REGISTER_RS4: u8 = REGISTER_RSX | 4;
-pub const REGISTER_RS5: u8 = REGISTER_RSX | 5;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Register(u8);
 
-pub const fn rsx(x: u8) -> Result<u8> {
-    if x < 6 {
-        Ok(REGISTER_RSX | x)
-    } else {
-        Err(Error::InvalidRegisterIndex)
+impl Register {
+    const RSX: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::RSX as u8;
+
+    pub const Z: Register = Register(RegisterType::X as u8 | 0x00);
+    pub const RSI: Register = Register(RegisterType::S as u8 | SyscallRegisterPrefix::RSI as u8);
+    pub const RSR: Register = Register(RegisterType::S as u8 | SyscallRegisterPrefix::RSR as u8);
+    pub const RS0: Register = Register(Self::RSX | 0);
+    pub const RS1: Register = Register(Self::RSX | 1);
+    pub const RS2: Register = Register(Self::RSX | 2);
+    pub const RS3: Register = Register(Self::RSX | 3);
+    pub const RS4: Register = Register(Self::RSX | 4);
+    pub const RS5: Register = Register(Self::RSX | 5);
+
+    pub const fn new(reg_type: RegisterType, x: u8) -> Result<Self> {
+        match reg_type {
+            RegisterType::X => Ok(Register(reg_type as u8 | x)),
+            RegisterType::S if x < 6 => Ok(Register(reg_type as u8 | Self::RSX | x)),
+            RegisterType::B | RegisterType::W | RegisterType::D | RegisterType::Q if x < 32 => {
+                Ok(Register(reg_type as u8 | x))
+            }
+            _ => Err(Error::InvalidRegisterIndex),
+        }
     }
-}
 
-pub const fn gpr(reg_type: RegisterType, x: u8) -> Result<u8> {
-    if x < 32 {
-        Ok(reg_type as u8 | x)
-    } else {
-        Err(Error::InvalidRegisterIndex)
+    pub const fn to_u8(self) -> u8 {
+        self.0
+    }
+
+    pub const fn to_u64(self) -> u64 {
+        self.0 as u64
     }
 }
 
@@ -54,55 +63,55 @@ mod tests {
 
     #[test]
     fn sr0() {
-        let result = rsx(0);
-        assert!(matches!(result, Ok(REGISTER_SR0)));
+        let result = Register::new(RegisterType::S, 0);
+        assert!(matches!(result, Ok(Register::RS0)));
     }
 
     #[test]
     fn sr1() {
-        let result = rsx(1);
-        assert!(matches!(result, Ok(REGISTER_SR1)));
+        let result = Register::new(RegisterType::S, 1);
+        assert!(matches!(result, Ok(Register::RS1)));
     }
 
     #[test]
     fn sr2() {
-        let result = rsx(2);
-        assert!(matches!(result, Ok(REGISTER_SR2)));
+        let result = Register::new(RegisterType::S, 2);
+        assert!(matches!(result, Ok(Register::RS2)));
     }
 
     #[test]
     fn sr3() {
-        let result = rsx(3);
-        assert!(matches!(result, Ok(REGISTER_SR3)));
+        let result = Register::new(RegisterType::S, 3);
+        assert!(matches!(result, Ok(Register::RS3)));
     }
 
     #[test]
     fn sr4() {
-        let result = rsx(4);
-        assert!(matches!(result, Ok(REGISTER_SR4)));
+        let result = Register::new(RegisterType::S, 4);
+        assert!(matches!(result, Ok(Register::RS4)));
     }
 
     #[test]
     fn sr5() {
-        let result = rsx(5);
-        assert!(matches!(result, Ok(REGISTER_SR5)));
+        let result = Register::new(RegisterType::S, 5);
+        assert!(matches!(result, Ok(Register::RS5)));
     }
 
     #[test]
     fn sr6() {
-        let result = rsx(6);
+        let result = Register::new(RegisterType::S, 6);
         assert!(matches!(result, Err(Error::InvalidRegisterIndex)));
     }
 
     #[test]
     fn br0() {
-        let result = gpr(RegisterType::B, 0);
-        assert!(matches!(result, Ok(0x40)));
+        let result = Register::new(RegisterType::B, 0);
+        assert!(matches!(result, Ok(Register(0x40))));
     }
 
     #[test]
     fn br31() {
-        let result = gpr(RegisterType::B, 31);
-        assert!(matches!(result, Ok(0x5F)));
+        let result = Register::new(RegisterType::B, 31);
+        assert!(matches!(result, Ok(Register(0x5F))));
     }
 }

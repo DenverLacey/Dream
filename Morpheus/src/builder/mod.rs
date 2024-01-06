@@ -5,7 +5,7 @@ mod proc_builder;
 pub use block_builder::*;
 pub use dream_builder::*;
 pub use proc_builder::*;
-use quicksand::{OperandType, RegisterType, SyscallRegisterPrefix, REGISTER_RSI, REGISTER_RSR};
+use quicksand::{OperandType, Register};
 
 use crate::errors::{Error, Result};
 use std::io::Write as _;
@@ -75,39 +75,35 @@ pub struct Operand {
 }
 
 impl Operand {
-    pub const fn rsi() -> Self {
+    // pub const fn rsi() -> Self {
+    //     Self {
+    //         kind: OperandType::Register,
+    //         value: Register::RSI.to_u64(),
+    //     }
+    // }
+
+    // pub const fn rsr() -> Self {
+    //     Self {
+    //         kind: OperandType::Register,
+    //         value: Register::RSR.to_u64(),
+    //     }
+    // }
+
+    // pub const fn reg(reg_type: RegisterType, index: u8) -> Result<Self> {
+    //     if let Ok(reg) = Register::new(reg_type, index) {
+    //         Ok(Self {
+    //             kind: OperandType::Register,
+    //             value: reg.to_u64(),
+    //         })
+    //     } else {
+    //         Err(Error::BadOperandValue)
+    //     }
+    // }
+
+    pub const fn reg(reg: Register) -> Self {
         Self {
             kind: OperandType::Register,
-            value: REGISTER_RSI as u64,
-        }
-    }
-
-    pub const fn rsr() -> Self {
-        Self {
-            kind: OperandType::Register,
-            value: REGISTER_RSR as u64,
-        }
-    }
-
-    pub const fn rsx(index: u8) -> Result<Self> {
-        if let Ok(reg) = quicksand::rsx(index) {
-            Ok(Self {
-                kind: OperandType::Register,
-                value: reg as u64,
-            })
-        } else {
-            Err(Error::BadOperandValue)
-        }
-    }
-
-    pub const fn gpr(reg_type: RegisterType, index: u8) -> Result<Self> {
-        if let Ok(reg) = quicksand::gpr(reg_type, index) {
-            Ok(Self {
-                kind: OperandType::Register,
-                value: reg as u64,
-            })
-        } else {
-            Err(Error::BadOperandValue)
+            value: reg.to_u64(),
         }
     }
 
@@ -123,5 +119,18 @@ impl Operand {
             kind: OperandType::Lit64,
             value: lit,
         }
+    }
+}
+
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OutputType {
+    Bin,
+    Lib,
+}
+
+impl OutputType {
+    pub fn as_bytes(self) -> [u8; 4] {
+        (self as u32).to_le_bytes()
     }
 }

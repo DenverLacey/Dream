@@ -35,7 +35,7 @@ pub enum OperandType {
 pub struct InstructionSignature(u8);
 
 impl InstructionSignature {
-    pub const fn as_u8(self) -> u8 {
+    pub const fn to_u8(self) -> u8 {
         self.0
     }
 }

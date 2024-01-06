@@ -1,18 +1,19 @@
 use super::{proc_builder::ProcedureBuilder, Write};
-use crate::errors::Result;
-use crate::version::Version;
+use crate::{errors::Result, version::Version, OutputType};
 
 pub struct Builder {
     version: Version,
+    output_type: OutputType,
     entry_point: usize,
     strings: Vec<Box<[u8]>>,
     code: Vec<u8>,
 }
 
 impl Builder {
-    pub fn new(version: Version) -> Self {
+    pub fn new(version: Version, output: OutputType) -> Self {
         Self {
             version,
+            output_type: output,
             entry_point: 0,
             strings: vec![],
             code: vec![],
@@ -35,7 +36,7 @@ impl Builder {
         offset
     }
 
-    pub fn procedure(&mut self, mut f: impl FnMut(&mut ProcedureBuilder)) -> usize {
+    pub fn procedure(&mut self, f: impl FnOnce(&mut ProcedureBuilder)) -> usize {
         let proc_begin = self.code.len();
 
         let mut proc = ProcedureBuilder::new(&mut self.code);
@@ -48,9 +49,11 @@ impl Builder {
 impl Builder {
     const PADDING: usize = 8;
 
-    fn write_magic(&self, f: &mut dyn Write) -> Result<()> {
+    fn write_header(&self, f: &mut dyn Write) -> Result<()> {
         f.write_str("DREAM")?;
         f.write_bytes(&self.version.as_bytes())?;
+        f.write_str("OUTT")?;
+        f.write_bytes(&self.output_type.as_bytes())?;
         Ok(())
     }
 
@@ -79,34 +82,43 @@ impl Builder {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::Read};
+    use std::fs::File;
 
-    use quicksand::RegisterType;
+    use quicksand::{Register, RegisterType};
 
     use crate::Operand;
 
     use super::*;
 
     #[test]
-    fn write_magic() {
-        let builder = Builder::new(Version::from(0));
+    fn write_header_bin() {
+        let builder = Builder::new(Version::from(0), OutputType::Bin);
         let mut output = String::new();
-        let result = builder.write_magic(&mut output);
+        let result = builder.write_header(&mut output);
         assert!(result.is_ok());
-        assert_eq!(output.as_str(), "DREAM000");
+        assert_eq!(output.as_str(), "DREAM000OUTT\x00\x00\x00\x00");
     }
 
     #[test]
-    fn write_magic_to_file() {
-        let builder = Builder::new(Version::from(87));
-        let mut file = File::create("tests/test_write_magic.bin").unwrap();
-        let result = builder.write_magic(&mut file);
+    fn write_header_lib() {
+        let builder = Builder::new(Version::from(0), OutputType::Lib);
+        let mut output = String::new();
+        let result = builder.write_header(&mut output);
+        assert!(result.is_ok());
+        assert_eq!(output.as_str(), "DREAM000OUTT\x01\x00\x00\x00");
+    }
+
+    #[test]
+    fn write_header_to_file() {
+        let builder = Builder::new(Version::from(87), OutputType::Bin);
+        let mut file = File::create("tests/test_write_header.bin").unwrap();
+        let result = builder.write_header(&mut file);
         assert!(result.is_ok());
     }
 
     #[test]
     fn write_text_section() {
-        let mut builder = Builder::new(Version::from(0));
+        let mut builder = Builder::new(Version::from(0), OutputType::Bin);
         let mut output = File::create("tests/test_write_text_section.bin").unwrap();
 
         builder.add_string("hello");
@@ -119,15 +131,56 @@ mod tests {
 
     #[test]
     fn write_procedure() {
-        let mut builder = Builder::new(Version::from(0));
+        let mut builder = Builder::new(Version::from(0), OutputType::Bin);
         let mut output = File::create("tests/test_write_procedure.bin").unwrap();
 
         builder.procedure(|proc| {
-            proc.block(|block| {
+            proc.body(|block| {
                 block
                     .emit_move(
-                        Operand::gpr(RegisterType::Q, 0).unwrap(),
+                        Operand::reg(Register::new(RegisterType::Q, 0).unwrap()),
                         Operand::lit64(69),
+                        None,
+                    )
+                    .unwrap();
+
+                block
+                    .emit_move(Operand::reg(Register::RSI), Operand::lit64(1), None)
+                    .unwrap();
+            })
+        });
+
+        output.write_bytes(&builder.code).unwrap();
+    }
+
+    #[test]
+    fn write_hello_world_procedure() {
+        let mut builder = Builder::new(Version::from(0), OutputType::Bin);
+        let mut output = File::create("tests/test_write_hello_world_procedure.bin").unwrap();
+
+        builder.procedure(|proc| {
+            proc.body(|block| {
+                block
+                    .emit_move(Operand::reg(Register::RSI), Operand::lit64(1), None)
+                    .unwrap();
+                block
+                    .emit_move(
+                        Operand::reg(Register::new(RegisterType::S, 0).unwrap()),
+                        Operand::lit64(2),
+                        None,
+                    )
+                    .unwrap();
+                block
+                    .emit_move(
+                        Operand::reg(Register::new(RegisterType::S, 1).unwrap()),
+                        Operand::lit64(0x0BB0),
+                        None,
+                    )
+                    .unwrap();
+                block
+                    .emit_move(
+                        Operand::reg(Register::new(RegisterType::S, 2).unwrap()),
+                        Operand::lit64(11),
                         None,
                     )
                     .unwrap();
