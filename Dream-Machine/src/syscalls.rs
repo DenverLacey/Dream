@@ -26,7 +26,7 @@ pub fn syscall1(vm: &mut VM) {
             let fid = vm.reg.rs[0] as sys::FileID;
             sys::io::close(fid);
         }
-        _ => panic!("Unvalid syscall1: {syscall:?}"),
+        _ => panic!("Invalid syscall1: {syscall:?}"),
     }
 }
 

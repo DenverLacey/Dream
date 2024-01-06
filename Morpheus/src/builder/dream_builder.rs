@@ -33,7 +33,7 @@ impl Builder {
             offset += std::mem::size_of::<usize>() + s.len() + Self::PADDING;
         }
         self.strings.push(Box::from(new.as_ref()));
-        offset
+        offset + std::mem::size_of::<u64>()
     }
 
     pub fn procedure(&mut self, f: impl FnOnce(&mut ProcedureBuilder)) -> usize {
@@ -49,6 +49,13 @@ impl Builder {
 impl Builder {
     const PADDING: usize = 8;
 
+    pub fn write_dream(&self, f: &mut dyn Write) -> Result<()> {
+        self.write_header(f)?;
+        self.write_text_section(f)?;
+        self.write_code_section(f)?;
+        Ok(())
+    }
+
     fn write_header(&self, f: &mut dyn Write) -> Result<()> {
         f.write_str("DREAM")?;
         f.write_bytes(&self.version.as_bytes())?;
@@ -58,25 +65,38 @@ impl Builder {
     }
 
     fn write_text_section(&self, f: &mut dyn Write) -> Result<usize> {
-        let mut text_size = 0;
+        let mut section_size = 0;
 
-        let strings_size: usize = self
+        let strings_size: u64 = self
             .strings
             .iter()
-            .map(|s| std::mem::size_of::<usize>() + s.len() + Self::PADDING)
-            .sum();
+            .map(|s| std::mem::size_of::<u64>() + s.len() + Self::PADDING)
+            .sum::<usize>() as u64;
 
-        text_size += f.write_str("TEXT")?;
-        text_size += f.write_bytes(&strings_size.to_le_bytes())?;
-        text_size += f.pad(4)?;
+        section_size += f.write_str("TEXT")?;
+        section_size += f.pad(4)?;
+        section_size += f.write_bytes(&strings_size.to_le_bytes())?;
 
         for s in self.strings.iter() {
-            text_size += f.write_bytes(&s.len().to_le_bytes())?;
-            text_size += f.write_bytes(s.as_ref())?;
-            text_size += f.write_bytes(&[0; Self::PADDING])?;
+            section_size += f.write_bytes(&s.len().to_le_bytes())?;
+            section_size += f.write_bytes(s.as_ref())?;
+            section_size += f.write_bytes(&[0; Self::PADDING])?;
         }
 
-        Ok(text_size)
+        Ok(section_size)
+    }
+
+    fn write_code_section(&self, f: &mut dyn Write) -> Result<usize> {
+        let mut section_size = 0;
+
+        section_size += f.write_str("CODE")?;
+        section_size += f.pad(4)?;
+        section_size += f.write_bytes(&self.code.len().to_le_bytes())?;
+        section_size += f.write_bytes(&self.entry_point.to_le_bytes())?;
+
+        section_size += f.write_bytes(&self.code)?;
+
+        Ok(section_size)
     }
 }
 
@@ -184,5 +204,44 @@ mod tests {
         });
 
         output.write_bytes(&builder.code).unwrap();
+    }
+
+    #[test]
+    pub fn write_dream() {
+        let mut builder = Builder::new(Version::from(0), OutputType::Bin);
+        let mut output = File::create("tests/write_dream.bin").unwrap();
+
+        let str_idx = builder.add_string("Hello world!\n");
+
+        let proc_idx = builder.procedure(|proc| {
+            proc.body(|block| {
+                block
+                    .emit_move(Operand::reg(Register::RSI), Operand::lit64(1), None)
+                    .unwrap();
+                block
+                    .emit_move(
+                        Operand::reg(Register::new(RegisterType::S, 0).unwrap()),
+                        Operand::lit64(2),
+                        None,
+                    )
+                    .unwrap();
+                block
+                    .emit_map(Register::new(RegisterType::S, 1).unwrap(), str_idx as u64)
+                    .unwrap();
+                block
+                    .emit_move(
+                        Operand::reg(Register::new(RegisterType::S, 2).unwrap()),
+                        Operand::lit64(11),
+                        None,
+                    )
+                    .unwrap();
+                block.emit_syscall(3).unwrap();
+            })
+        });
+
+        builder.set_entry(proc_idx);
+
+        let result = builder.write_dream(&mut output);
+        assert!(result.is_ok());
     }
 }
