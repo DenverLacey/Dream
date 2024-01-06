@@ -21,6 +21,8 @@ pub enum SyscallRegisterPrefix {
     RSX = 0x00, // RSX-Registers: The registers used to pass arguments to syscalls.
 }
 
+pub const SYSCALL_REGISTER_PREFIX_MASK: u8 = 0x18;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Register(u8);
 
@@ -54,6 +56,35 @@ impl Register {
 
     pub const fn to_u64(self) -> u64 {
         self.0 as u64
+    }
+
+    pub const fn is_x(self) -> bool {
+        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::X as u8
+    }
+
+    pub const fn is_s(self) -> bool {
+        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::S as u8
+    }
+
+    pub const fn is_rsx(self) -> bool {
+        const MASK: u8 = REGISTER_PREFIX_MASK | SYSCALL_REGISTER_PREFIX_MASK;
+        (self.0 & MASK) == (RegisterType::S as u8 | SyscallRegisterPrefix::RSX as u8)
+    }
+
+    pub const fn is_b(self) -> bool {
+        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::B as u8
+    }
+
+    pub const fn is_w(self) -> bool {
+        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::W as u8
+    }
+
+    pub const fn is_d(self) -> bool {
+        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::D as u8
+    }
+
+    pub const fn is_q(self) -> bool {
+        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::Q as u8
     }
 }
 
@@ -113,5 +144,63 @@ mod tests {
     fn br31() {
         let result = Register::new(RegisterType::B, 31);
         assert!(matches!(result, Ok(Register(0x5F))));
+    }
+
+    #[test]
+    pub fn is_x() {
+        let x = Register::new(RegisterType::X, 0).unwrap();
+        let b = Register::new(RegisterType::B, 0).unwrap();
+        assert!(x.is_x());
+        assert!(!b.is_x());
+    }
+
+    #[test]
+    pub fn is_s() {
+        let s = Register::new(RegisterType::S, 0).unwrap();
+        let b = Register::new(RegisterType::B, 0).unwrap();
+        assert!(s.is_s());
+        assert!(!b.is_s());
+    }
+
+    #[test]
+    pub fn is_rsx() {
+        let s = Register::new(RegisterType::S, 0).unwrap();
+        let b = Register::new(RegisterType::B, 0).unwrap();
+        let rsi = Register::RSI;
+        assert!(s.is_rsx());
+        assert!(!b.is_rsx());
+        assert!(!rsi.is_rsx());
+    }
+
+    #[test]
+    pub fn is_b() {
+        let b = Register::new(RegisterType::B, 0).unwrap();
+        let w = Register::new(RegisterType::W, 0).unwrap();
+        assert!(b.is_b());
+        assert!(!w.is_b());
+    }
+
+    #[test]
+    pub fn is_w() {
+        let w = Register::new(RegisterType::W, 0).unwrap();
+        let b = Register::new(RegisterType::B, 0).unwrap();
+        assert!(w.is_w());
+        assert!(!b.is_w());
+    }
+
+    #[test]
+    pub fn is_d() {
+        let d = Register::new(RegisterType::D, 0).unwrap();
+        let b = Register::new(RegisterType::B, 0).unwrap();
+        assert!(d.is_d());
+        assert!(!b.is_d());
+    }
+
+    #[test]
+    pub fn is_q() {
+        let q = Register::new(RegisterType::Q, 0).unwrap();
+        let b = Register::new(RegisterType::B, 0).unwrap();
+        assert!(q.is_q());
+        assert!(!b.is_q());
     }
 }

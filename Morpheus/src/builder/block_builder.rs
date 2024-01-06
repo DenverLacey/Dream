@@ -110,6 +110,17 @@ impl<'out> BlockBuilder<'out> {
         self.out.push(reg.to_u8());
     }
 
+    pub fn emit_map(&mut self, dst: Register, index: u64) -> Result<()> {
+        if dst.is_q() || dst.is_rsx() {
+            self.out.push(Instruction::Map as u8);
+            self.out.push(dst.to_u8());
+            self.out.extend(index.to_le_bytes());
+            Ok(())
+        } else {
+            Err(Error::BadOperandValue)
+        }
+    }
+
     pub fn emit_syscall(&mut self, nargs: u8) -> Result<()> {
         match nargs {
             0 => self.out.push(Instruction::Syscall0 as u8),

@@ -9,6 +9,7 @@ pub enum Instruction {
     Push = 0x06,     // Push a value onto the stack.
     PushImm = 0x07,  // Push an immediate value onto the stack.
     Pop = 0x08,      // Pop a value from the stack and copy into a register.
+    Map = 0x09,      // Map a constant index into an address and store it in a 64-bit register.
     Syscall0 = 0x10, // Perform syscall with 0 arguments.
     Syscall1 = 0x11, // Perform syscall with 1 argument.
     Syscall2 = 0x12, // Perform syscall with 2 arguments.

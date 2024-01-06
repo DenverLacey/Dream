@@ -171,11 +171,7 @@ mod tests {
                     )
                     .unwrap();
                 block
-                    .emit_move(
-                        Operand::reg(Register::new(RegisterType::S, 1).unwrap()),
-                        Operand::lit64(0x0BB0),
-                        None,
-                    )
+                    .emit_map(Register::new(RegisterType::S, 1).unwrap(), 0)
                     .unwrap();
                 block
                     .emit_move(
