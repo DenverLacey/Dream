@@ -1,7 +1,8 @@
 #[derive(Debug)]
 pub enum Error {
     InvalidArgument,
-    InvalidRegisterIndex,
+    InvalidRegister,
+    InvalidInstruction,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

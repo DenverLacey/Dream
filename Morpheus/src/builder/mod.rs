@@ -5,9 +5,10 @@ mod proc_builder;
 pub use block_builder::*;
 pub use dream_builder::*;
 pub use proc_builder::*;
-use quicksand::{OperandType, Register};
 
 use crate::errors::{Error, Result};
+
+use quicksand::{OperandType, Register};
 use std::io::Write as _;
 
 pub trait Write {

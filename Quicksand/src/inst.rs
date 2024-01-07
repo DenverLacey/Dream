@@ -1,4 +1,5 @@
 #[repr(u8)]
+#[derive(Debug)]
 pub enum Instruction {
     NoOp = 0x00,     // Does nothing.
     Move = 0x01,     // Move a value into a register.
@@ -22,6 +23,40 @@ pub enum Instruction {
 }
 
 pub const INST_ALT_MODE: u8 = 0x80;
+
+impl TryFrom<u8> for Instruction {
+    type Error = crate::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        // SAFETY: We're explicitly allowing `inst` to be an incorrect value
+        // because the code below handles that case.
+        let inst = unsafe { std::mem::transmute(value & 0x7F) };
+        match inst {
+            Instruction::NoOp
+            | Instruction::Move
+            | Instruction::MoveImm
+            | Instruction::MoveAddr
+            | Instruction::Clear
+            | Instruction::Set
+            | Instruction::Push
+            | Instruction::PushImm
+            | Instruction::Pop
+            | Instruction::Map
+            | Instruction::Syscall0
+            | Instruction::Syscall1
+            | Instruction::Syscall2
+            | Instruction::Syscall3
+            | Instruction::Syscall4
+            | Instruction::Syscall5
+            | Instruction::Syscall6
+            | Instruction::Ret => return Ok(inst),
+            Instruction::MAX => return Err(crate::Error::InvalidInstruction),
+        }
+
+        // This is reachable because `inst` might be an invalid `Instruction`.
+        #[allow(unreachable_code)]
+        Err(crate::Error::InvalidInstruction)
+    }
+}
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
