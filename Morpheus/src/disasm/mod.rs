@@ -5,11 +5,11 @@ use crate::{Error, Result, Write};
 pub fn disasemble(code: impl IntoIterator<Item = u8>, f: &mut dyn Write) -> Result<()> {
     let mut code = code.into_iter().enumerate();
     while let Some((i, inst)) = code.next() {
-        let is_alt = inst & 0x80 != 0;
+        let is_alt = inst & Instruction::ALT_MODE != 0;
         let inst = inst.try_into().or(Err(Error::InvalidInstruction))?;
 
         let inst_str = format!("{inst:?}");
-        f.write_bytes(format!("{i:08X}\t{inst_str:<12}").as_bytes())?;
+        f.write_str(&format!("{i:08X}\t{inst_str:<12}"))?;
 
         match inst {
             Instruction::NoOp => {}
@@ -30,7 +30,6 @@ pub fn disasemble(code: impl IntoIterator<Item = u8>, f: &mut dyn Write) -> Resu
             Instruction::Syscall5 => {}
             Instruction::Syscall6 => {}
             Instruction::Ret => {}
-            Instruction::MAX => return Err(Error::InvalidInstruction),
         }
         f.write_chr('\n').expect("Failed to write disasembly.");
     }
@@ -226,3 +225,4 @@ mod tests {
         assert!(result.is_ok());
     }
 }
+

@@ -1,5 +1,5 @@
 use crate::{Error, Operand, Result};
-use quicksand::{Instruction, OperandType, Register, INST_ALT_MODE};
+use quicksand::{Instruction, OperandType, Register};
 
 pub struct BlockBuilder<'out> {
     out: &'out mut Vec<u8>,
@@ -41,12 +41,14 @@ impl<'out> BlockBuilder<'out> {
             },
             OperandType::Address => match src.kind {
                 OperandType::Register => {
-                    self.out.push(Instruction::Move as u8 | INST_ALT_MODE);
+                    self.out
+                        .push(Instruction::Move as u8 | Instruction::ALT_MODE);
                     self.out.extend(dst.value.to_le_bytes());
                     self.out.push(src.value as u8);
                 }
                 OperandType::Address => {
-                    self.out.push(Instruction::MoveAddr as u8 | INST_ALT_MODE);
+                    self.out
+                        .push(Instruction::MoveAddr as u8 | Instruction::ALT_MODE);
                     self.out.extend(dst.value.to_le_bytes());
                     self.out.extend(src.value.to_le_bytes());
                     if let Some(size) = size {
@@ -58,15 +60,18 @@ impl<'out> BlockBuilder<'out> {
                 }
                 OperandType::Lit64 => match src.value {
                     0 => {
-                        self.out.push(Instruction::Clear as u8 | INST_ALT_MODE);
+                        self.out
+                            .push(Instruction::Clear as u8 | Instruction::ALT_MODE);
                         self.out.push(dst.value as u8);
                     }
                     1 => {
-                        self.out.push(Instruction::Set as u8 | INST_ALT_MODE);
+                        self.out
+                            .push(Instruction::Set as u8 | Instruction::ALT_MODE);
                         self.out.push(dst.value as u8);
                     }
                     _ => {
-                        self.out.push(Instruction::MoveImm as u8 | INST_ALT_MODE);
+                        self.out
+                            .push(Instruction::MoveImm as u8 | Instruction::ALT_MODE);
                         self.out.extend(dst.value.to_le_bytes());
                         self.out.extend(src.value.to_le_bytes());
                     }
@@ -95,7 +100,8 @@ impl<'out> BlockBuilder<'out> {
                 self.out.push(value.value as u8);
             }
             OperandType::Address => {
-                self.out.push(Instruction::Push as u8 | INST_ALT_MODE);
+                self.out
+                    .push(Instruction::Push as u8 | Instruction::ALT_MODE);
                 self.out.extend(value.value.to_le_bytes());
             }
             OperandType::Lit64 => {

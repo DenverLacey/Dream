@@ -13,7 +13,9 @@ pub enum RegisterType {
     Q = 0xE0, // Q-Registers. Index stored in lower 5 bits.
 }
 
-pub const REGISTER_PREFIX_MASK: u8 = 0xE0;
+impl RegisterType {
+    pub const MASK: u8 = 0xE0;
+}
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,7 +25,9 @@ pub enum SyscallRegisterPrefix {
     RSX = 0x00, // RSX-Registers: The registers used to pass arguments to syscalls.
 }
 
-pub const SYSCALL_REGISTER_PREFIX_MASK: u8 = 0x18;
+impl SyscallRegisterPrefix {
+    pub const MASK: u8 = 0x18;
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Register(u8);
@@ -31,7 +35,7 @@ pub struct Register(u8);
 impl Register {
     const RSX: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::RSX as u8;
 
-    pub const Z: Register = Register(RegisterType::X as u8 | 0x00);
+    pub const RXZ: Register = Register(RegisterType::X as u8 | 0x00);
     pub const RSI: Register = Register(RegisterType::S as u8 | SyscallRegisterPrefix::RSI as u8);
     pub const RSR: Register = Register(RegisterType::S as u8 | SyscallRegisterPrefix::RSR as u8);
     pub const RS0: Register = Register(Self::RSX | 0);
@@ -61,32 +65,32 @@ impl Register {
     }
 
     pub const fn is_x(self) -> bool {
-        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::X as u8
+        self.0 & RegisterType::MASK as u8 == RegisterType::X as u8
     }
 
     pub const fn is_s(self) -> bool {
-        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::S as u8
+        self.0 & RegisterType::MASK as u8 == RegisterType::S as u8
     }
 
     pub const fn is_rsx(self) -> bool {
-        const MASK: u8 = REGISTER_PREFIX_MASK | SYSCALL_REGISTER_PREFIX_MASK;
+        const MASK: u8 = RegisterType::MASK | SyscallRegisterPrefix::MASK;
         (self.0 & MASK) == (RegisterType::S as u8 | SyscallRegisterPrefix::RSX as u8)
     }
 
     pub const fn is_b(self) -> bool {
-        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::B as u8
+        self.0 & RegisterType::MASK as u8 == RegisterType::B as u8
     }
 
     pub const fn is_w(self) -> bool {
-        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::W as u8
+        self.0 & RegisterType::MASK as u8 == RegisterType::W as u8
     }
 
     pub const fn is_d(self) -> bool {
-        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::D as u8
+        self.0 & RegisterType::MASK as u8 == RegisterType::D as u8
     }
 
     pub const fn is_q(self) -> bool {
-        self.0 & REGISTER_PREFIX_MASK as u8 == RegisterType::Q as u8
+        self.0 & RegisterType::MASK as u8 == RegisterType::Q as u8
     }
 }
 
@@ -104,14 +108,14 @@ impl TryFrom<u8> for Register {
         const SYS_REG_RSR: u8 = SyscallRegisterPrefix::RSR as u8;
         const SYS_REG_RSX: u8 = SyscallRegisterPrefix::RSX as u8;
 
-        const SYS_REG_IDX_MASK: u8 = !(REGISTER_PREFIX_MASK | SYSCALL_REGISTER_PREFIX_MASK);
+        const SYS_REG_IDX_MASK: u8 = !(RegisterType::MASK | SyscallRegisterPrefix::MASK);
 
-        match value & REGISTER_PREFIX_MASK {
-            REG_TYPE_X => match value & !REGISTER_PREFIX_MASK {
+        match value & RegisterType::MASK {
+            REG_TYPE_X => match value & !RegisterType::MASK {
                 0x00 => Ok(Register(0)),
                 _ => Err(Error::InvalidRegister),
             },
-            REG_TYPE_S => match value & SYSCALL_REGISTER_PREFIX_MASK {
+            REG_TYPE_S => match value & SyscallRegisterPrefix::MASK {
                 SYS_REG_RSI => {
                     if value & SYS_REG_IDX_MASK == 0 {
                         Ok(Register::RSI)
@@ -136,19 +140,19 @@ impl TryFrom<u8> for Register {
                 }
                 _ => Err(Error::InvalidRegister),
             },
-            REG_TYPE_B => match value & !REGISTER_PREFIX_MASK {
+            REG_TYPE_B => match value & !RegisterType::MASK {
                 x if x < 32 => Register::new(RegisterType::B, x),
                 _ => Err(Error::InvalidRegister),
             },
-            REG_TYPE_W => match value & !REGISTER_PREFIX_MASK {
+            REG_TYPE_W => match value & !RegisterType::MASK {
                 x if x < 32 => Register::new(RegisterType::W, x),
                 _ => Err(Error::InvalidRegister),
             },
-            REG_TYPE_D => match value & !REGISTER_PREFIX_MASK {
+            REG_TYPE_D => match value & !RegisterType::MASK {
                 x if x < 32 => Register::new(RegisterType::D, x),
                 _ => Err(Error::InvalidRegister),
             },
-            REG_TYPE_Q => match value & !REGISTER_PREFIX_MASK {
+            REG_TYPE_Q => match value & !RegisterType::MASK {
                 x if x < 32 => Register::new(RegisterType::Q, x),
                 _ => Err(Error::InvalidRegister),
             },
@@ -160,7 +164,7 @@ impl TryFrom<u8> for Register {
 impl Display for Register {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.is_x() {
-            match self.0 & !REGISTER_PREFIX_MASK {
+            match self.0 & !RegisterType::MASK {
                 0x00 => write!(f, "rxz"),
                 _ => Err(std::fmt::Error),
             }
@@ -169,19 +173,19 @@ impl Display for Register {
         } else if *self == Self::RSR {
             write!(f, "rsr")
         } else if self.is_rsx() {
-            let idx = self.0 & !(REGISTER_PREFIX_MASK | SYSCALL_REGISTER_PREFIX_MASK);
+            let idx = self.0 & !(RegisterType::MASK | SyscallRegisterPrefix::MASK);
             write!(f, "rs{idx}")
         } else if self.is_b() {
-            let idx = self.0 & !REGISTER_PREFIX_MASK;
+            let idx = self.0 & !RegisterType::MASK;
             write!(f, "rb{idx}")
         } else if self.is_w() {
-            let idx = self.0 & !REGISTER_PREFIX_MASK;
+            let idx = self.0 & !RegisterType::MASK;
             write!(f, "rw{idx}")
         } else if self.is_d() {
-            let idx = self.0 & !REGISTER_PREFIX_MASK;
+            let idx = self.0 & !RegisterType::MASK;
             write!(f, "rd{idx}")
         } else if self.is_q() {
-            let idx = self.0 & !REGISTER_PREFIX_MASK;
+            let idx = self.0 & !RegisterType::MASK;
             write!(f, "rq{idx}")
         } else {
             Err(std::fmt::Error)

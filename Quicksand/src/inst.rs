@@ -19,52 +19,6 @@ pub enum Instruction {
     Syscall5 = 0x15, // Perform syscall with 5 arguments.
     Syscall6 = 0x16, // Perform syscall with 6 arguments.
     Ret = 0x20,      // Returns from the current procedure.
-    MAX = 0x7F,      // This is the maximum value for an instruction. The top-most bit is reserved.
-}
-
-pub const INST_ALT_MODE: u8 = 0x80;
-
-impl TryFrom<u8> for Instruction {
-    type Error = crate::Error;
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        // SAFETY: We're explicitly allowing `inst` to be an incorrect value
-        // because the code below handles that case.
-        let inst = unsafe { std::mem::transmute(value & 0x7F) };
-        match inst {
-            Instruction::NoOp
-            | Instruction::Move
-            | Instruction::MoveImm
-            | Instruction::MoveAddr
-            | Instruction::Clear
-            | Instruction::Set
-            | Instruction::Push
-            | Instruction::PushImm
-            | Instruction::Pop
-            | Instruction::Map
-            | Instruction::Syscall0
-            | Instruction::Syscall1
-            | Instruction::Syscall2
-            | Instruction::Syscall3
-            | Instruction::Syscall4
-            | Instruction::Syscall5
-            | Instruction::Syscall6
-            | Instruction::Ret => return Ok(inst),
-            Instruction::MAX => return Err(crate::Error::InvalidInstruction),
-        }
-
-        // This is reachable because `inst` might be an invalid `Instruction`.
-        #[allow(unreachable_code)]
-        Err(crate::Error::InvalidInstruction)
-    }
-}
-
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum OperandType {
-    // Lit32 = 0b00,  NOTE: Removing this to allow for zero to mean None.
-    Register = 0b01,
-    Address = 0b10,
-    Lit64 = 0b11,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -77,6 +31,9 @@ impl InstructionSignature {
 }
 
 impl Instruction {
+    pub const MAX: u8 = 0x7F; // This is the maximum value for an instruction. The top-most bit is reserved.
+    pub const ALT_MODE: u8 = 0x80; // High bit denotes alt-mode for an instruction.
+
     pub const fn sig1(op1: OperandType) -> InstructionSignature {
         InstructionSignature(op1 as u8)
     }
@@ -110,6 +67,48 @@ impl Instruction {
         let op4 = op4 as u8;
         InstructionSignature((op4 << 6) | (op3 << 4) | (op2 << 2) | op1)
     }
+}
+
+impl TryFrom<u8> for Instruction {
+    type Error = crate::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        // SAFETY: We're explicitly allowing `inst` to be an incorrect value
+        // because the code below handles that case.
+        let inst = unsafe { std::mem::transmute(value & !Self::ALT_MODE) };
+        match inst {
+            Instruction::NoOp
+            | Instruction::Move
+            | Instruction::MoveImm
+            | Instruction::MoveAddr
+            | Instruction::Clear
+            | Instruction::Set
+            | Instruction::Push
+            | Instruction::PushImm
+            | Instruction::Pop
+            | Instruction::Map
+            | Instruction::Syscall0
+            | Instruction::Syscall1
+            | Instruction::Syscall2
+            | Instruction::Syscall3
+            | Instruction::Syscall4
+            | Instruction::Syscall5
+            | Instruction::Syscall6
+            | Instruction::Ret => return Ok(inst),
+        }
+
+        // This is reachable because `inst` might be an invalid `Instruction`.
+        #[allow(unreachable_code)]
+        Err(crate::Error::InvalidInstruction)
+    }
+}
+
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OperandType {
+    // Lit32 = 0b00,  NOTE: Removing this to allow for zero to mean None.
+    Register = 0b01,
+    Address = 0b10,
+    Lit64 = 0b11,
 }
 
 #[macro_export]
