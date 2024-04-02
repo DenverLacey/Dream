@@ -44,7 +44,7 @@ fn main() {
             return;
         }
     };
-    codegen::codegen(&mut out_file, &exprs);
+    codegen::compile(&mut out_file, &exprs);
 
     let dream_file = BufReader::new(File::open(out_path).unwrap());
     let mut dasm_file = File::create(dasm_path).unwrap();

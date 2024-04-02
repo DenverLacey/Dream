@@ -18,7 +18,7 @@ struct Generator {
     stack_pointer: u64,
 }
 
-pub fn codegen(out: &mut File, exprs: &[Expr]) {
+pub fn compile(out: &mut File, exprs: &[Expr]) {
     let mut builder = Builder::new(Version::from(0), OutputType::Bin);
     let mut generator = Generator::default();
     let mut reg_ator = RegisterAllocator::new();
@@ -27,7 +27,7 @@ pub fn codegen(out: &mut File, exprs: &[Expr]) {
             let mut registers = reg_ator.start_arena();
             for expr in exprs {
                 if let Err(err) =
-                    codegen_expression(body, &mut generator, registers.new_arena(), expr)
+                    compile_expression(body, &mut generator, registers.new_arena(), expr)
                 {
                     println!("ERROR: {err}");
                     generator.errored = true;
@@ -47,7 +47,7 @@ pub fn codegen(out: &mut File, exprs: &[Expr]) {
         .expect("INTERNAL ERROR: failed to write dream file.");
 }
 
-fn codegen_expression(
+fn compile_expression(
     b: &mut BlockBuilder,
     gen: &mut Generator,
     mut registers: RegisterArena,
@@ -57,7 +57,7 @@ fn codegen_expression(
         Expr::Int(value) => {
             let result = registers.next(RegisterType::Q);
             b.emit_move(Operand::reg(result), Operand::lit64(*value as u64), None)
-                .map_err(|_| "Failed to emit move instruction.")?;
+                .expect("INTERNAL ERROR: failed to emit move instruction.");
             Ok(result)
         }
         Expr::Ident(ident) => {
@@ -78,9 +78,9 @@ fn codegen_expression(
                 .expect("INTERNAL ERROR: failed to emit move instruction for dollar operator.");
 
             // TODO: Implement this for multiple operands.
-            let value = codegen_expression(b, gen, registers.new_arena(), &operands[0])?;
+            let value = compile_expression(b, gen, registers.new_arena(), &operands[0])?;
             b.emit_move(Operand::reg(Register::RS1), Operand::reg(value), None)
-                .map_err(|_| "Failed to emit move instruction.")?;
+                .expect("INTERNAL ERROR: failed to emit move instruction.");
 
             b.emit_syscall(2)
                 .expect("INTERNAL ERROR: failed to emit syscall2.");
@@ -96,7 +96,7 @@ fn codegen_expression(
             todo!()
         }
         Expr::Let(ident, init) => {
-            let value = codegen_expression(b, gen, registers.new_arena(), init)?;
+            let value = compile_expression(b, gen, registers.new_arena(), init)?;
             b.emit_push(Operand::reg(value));
             gen.variables.insert(ident.clone(), gen.stack_pointer);
             gen.stack_pointer += 8;
@@ -104,3 +104,4 @@ fn codegen_expression(
         }
     }
 }
+
