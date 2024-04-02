@@ -35,6 +35,8 @@ pub struct Register(u8);
 impl Register {
     const RSX: u8 = RegisterType::S as u8 | SyscallRegisterPrefix::RSX as u8;
 
+    pub const MAX: u8 = 32;
+
     pub const RXZ: Register = Register(RegisterType::X as u8 | 0x00);
     pub const RSI: Register = Register(RegisterType::S as u8 | SyscallRegisterPrefix::RSI as u8);
     pub const RSR: Register = Register(RegisterType::S as u8 | SyscallRegisterPrefix::RSR as u8);
@@ -49,7 +51,7 @@ impl Register {
         match reg_type {
             RegisterType::X => Ok(Register(reg_type as u8 | x)),
             RegisterType::S if x < 6 => Ok(Register(reg_type as u8 | Self::RSX | x)),
-            RegisterType::B | RegisterType::W | RegisterType::D | RegisterType::Q if x < 32 => {
+            RegisterType::B | RegisterType::W | RegisterType::D | RegisterType::Q if x < Self::MAX => {
                 Ok(Register(reg_type as u8 | x))
             }
             _ => Err(Error::InvalidRegister),
@@ -141,19 +143,19 @@ impl TryFrom<u8> for Register {
                 _ => Err(Error::InvalidRegister),
             },
             REG_TYPE_B => match value & !RegisterType::MASK {
-                x if x < 32 => Register::new(RegisterType::B, x),
+                x if x < Self::MAX => Register::new(RegisterType::B, x),
                 _ => Err(Error::InvalidRegister),
             },
             REG_TYPE_W => match value & !RegisterType::MASK {
-                x if x < 32 => Register::new(RegisterType::W, x),
+                x if x < Self::MAX => Register::new(RegisterType::W, x),
                 _ => Err(Error::InvalidRegister),
             },
             REG_TYPE_D => match value & !RegisterType::MASK {
-                x if x < 32 => Register::new(RegisterType::D, x),
+                x if x < Self::MAX => Register::new(RegisterType::D, x),
                 _ => Err(Error::InvalidRegister),
             },
             REG_TYPE_Q => match value & !RegisterType::MASK {
-                x if x < 32 => Register::new(RegisterType::Q, x),
+                x if x < Self::MAX => Register::new(RegisterType::Q, x),
                 _ => Err(Error::InvalidRegister),
             },
             _ => Err(Error::InvalidRegister),

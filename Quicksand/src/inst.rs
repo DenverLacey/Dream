@@ -1,24 +1,25 @@
 #[repr(u8)]
 #[derive(Debug)]
 pub enum Instruction {
-    NoOp = 0x00,     // Does nothing.
-    Move = 0x01,     // Move a value into a register.
-    MoveImm = 0x02,  // Move an immediate value into a register.
-    MoveAddr = 0x03, // Move a value into a register via an address.
-    Clear = 0x04,    // Set a register to zero.
-    Set = 0x05,      // Set a register to one.
-    Push = 0x06,     // Push a value onto the stack.
-    PushImm = 0x07,  // Push an immediate value onto the stack.
-    Pop = 0x08,      // Pop a value from the stack and copy into a register.
-    Map = 0x09,      // Map a constant index into an address and store it in a 64-bit register.
-    Syscall0 = 0x10, // Perform syscall with 0 arguments.
-    Syscall1 = 0x11, // Perform syscall with 1 argument.
-    Syscall2 = 0x12, // Perform syscall with 2 arguments.
-    Syscall3 = 0x13, // Perform syscall with 3 arguments.
-    Syscall4 = 0x14, // Perform syscall with 4 arguments.
-    Syscall5 = 0x15, // Perform syscall with 5 arguments.
-    Syscall6 = 0x16, // Perform syscall with 6 arguments.
-    Ret = 0x20,      // Returns from the current procedure.
+    NoOp = 0x00,      // Does nothing.
+    Move = 0x01,      // Move a value into a register.
+    MoveImm = 0x02,   // Move an immediate value into a register.
+    MoveAddr = 0x03,  // Move a value into a register via an address.
+    Clear = 0x04,     // Set a register to zero.
+    Set = 0x05,       // Set a register to one.
+    Push = 0x06,      // Push a value onto the stack.
+    PushImm = 0x07,   // Push an immediate value onto the stack.
+    Pop = 0x08,       // Pop a value from the stack and copy into a register.
+    StackLoad = 0x09, // Load a value from the stack into a register.
+    Map = 0x0A,       // Map a constant index into an address and store it in a 64-bit register.
+    Syscall0 = 0x10,  // Perform syscall with 0 arguments.
+    Syscall1 = 0x11,  // Perform syscall with 1 argument.
+    Syscall2 = 0x12,  // Perform syscall with 2 arguments.
+    Syscall3 = 0x13,  // Perform syscall with 3 arguments.
+    Syscall4 = 0x14,  // Perform syscall with 4 arguments.
+    Syscall5 = 0x15,  // Perform syscall with 5 arguments.
+    Syscall6 = 0x16,  // Perform syscall with 6 arguments.
+    Ret = 0x20,       // Returns from the current procedure.
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -85,6 +86,7 @@ impl TryFrom<u8> for Instruction {
             | Instruction::Push
             | Instruction::PushImm
             | Instruction::Pop
+            | Instruction::StackLoad
             | Instruction::Map
             | Instruction::Syscall0
             | Instruction::Syscall1

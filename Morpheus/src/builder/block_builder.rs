@@ -116,6 +116,12 @@ impl<'out> BlockBuilder<'out> {
         self.out.push(reg.to_u8());
     }
 
+    pub fn emit_stack_load(&mut self, reg: Register, offset: u64) {
+        self.out.push(Instruction::StackLoad as u8);
+        self.out.push(reg.to_u8());
+        self.out.extend(offset.to_le_bytes());
+    }
+
     pub fn emit_map(&mut self, dst: Register, index: u64) -> Result<()> {
         if dst.is_q() || dst.is_rsx() {
             self.out.push(Instruction::Map as u8);

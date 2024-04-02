@@ -1,4 +1,4 @@
-use crate::ir::SExpr::{self, *};
+use crate::ir::{Expr, Operator};
 use std::iter::Peekable;
 
 pub struct Parser<I: Iterator> {
@@ -87,7 +87,7 @@ impl<I> Parser<I>
 where
     I: Iterator<Item = char>,
 {
-    pub fn parse(source: Peekable<I>) -> Result<SExpr, &'static str> {
+    pub fn parse(source: Peekable<I>) -> Result<Vec<Expr>, &'static str> {
         let mut p = Parser {
             source,
             peeked: None,
@@ -96,11 +96,11 @@ where
         let mut exprs = vec![];
 
         while p.more_to_parse() {
-            let elem = p.parse_expr(true)?;
+            let elem = p.parse_expr(true, true)?;
             exprs.push(elem);
         }
 
-        Ok(Expression { elems: exprs })
+        Ok(exprs)
     }
 
     fn expect(&mut self, tok: Token, err: &'static str) -> Result<Token, &'static str> {
@@ -111,66 +111,89 @@ where
         Ok(ntok)
     }
 
-    fn parse_expr(&mut self, allow_decls: bool) -> Result<SExpr, &'static str> {
-        if self
-            .peek_token()
-            .is_some_and(|t| !t.discriminants_eq(&Token::OpenParen))
-        {
-            let tok = self.next_token().ok_or("Unterminated statement.")?;
-            let elem = match tok {
-                Token::Int(value) => Int(value),
-                Token::Ident(ident) => Ident(ident),
-                _ => return Err("Unparenthesized complex expression."),
-            };
-            Ok(elem)
-        } else {
-            self.next_token().expect("Already peeked");
+    fn eat(&mut self, tok: Token) -> bool {
+        let ptok = match self.peek_token() {
+            Some(ptok) => ptok,
+            None => return false,
+        };
+        tok.discriminants_eq(&ptok)
+    }
 
-            let mut stmt = vec![];
-
-            loop {
-                let elem = if self.peek_token().is_some_and(|t|t.discriminants_eq(&Token::OpenParen)) {
-                    self.parse_expr(false)?
-                } else {
-                    let tok = self.next_token().ok_or("Unterminated statement.")?;
-                    match tok {
-                        Token::OpenParen => {
-                            let expr = self.parse_expr(false)?;
-                            expr
-                        }
-                        Token::CloseParen => break,
-                        Token::Plus => Plus,
-                        Token::Dash => Dash,
-                        Token::Star => Star,
-                        Token::Slash => Slash,
-                        Token::Eq => Eq,
-                        Token::Dollar => Dollar,
-                        Token::Let => {
-                            // TODO: Move this so it has to be the first and only thing in the Expression
-                            if allow_decls {
-                                stmt.push(Let);
-                                let Token::Ident(ident) = self.expect(Token::Ident(String::new()), "Expected an identifier after 'let'")? else { unreachable!() };
-                                stmt.push(Ident(ident));
-                                let expr = self.parse_expr(false)?;
-                                stmt.push(expr);
-                                self.expect(
-                                    Token::CloseParen,
-                                    "Expected ')' to end 'let' expression.",
-                                )?;
-                                break;
-                            } else {
-                                return Err("'let' expressions not allowed here.");
-                            }
-                        }
-                        Token::Int(value) => Int(value),
-                        Token::Ident(ident) => Ident(ident),
-                    }
-                };
-                stmt.push(elem);
-            }
-
-            Ok(Expression { elems: stmt })
+    fn parse_expr(&mut self, allow_decls: bool, parens_required: bool) -> Result<Expr, &'static str> {
+        if parens_required {
+            self.expect(Token::OpenParen, "Expected '(' to begin expression.")?;
         }
+
+        let parens = self.eat(Token::OpenParen);
+
+        let expr = match self.next_token().ok_or("Expected operator.")? {
+            Token::Int(value) => Expr::Int(value),
+            Token::Ident(ident) => Expr::Ident(ident),
+            Token::Plus => {
+                if !parens_required && !parens {
+                    return Err("'+' operation requires parentheses.");
+                }
+                self.parse_op(Operator::Plus)?
+            }
+            Token::Dash => {
+                if !parens_required && !parens {
+                    return Err("'-' operation requires parentheses.");
+                }
+                self.parse_op(Operator::Dash)?
+            }
+            Token::Star => {
+                if !parens_required && !parens {
+                    return Err("'*' operation requires parentheses.");
+                }
+                self.parse_op(Operator::Star)?
+            }
+            Token::Slash => {
+                if !parens_required && !parens {
+                    return Err("'/' operation requires parentheses.");
+                }
+                self.parse_op(Operator::Slash)?
+            }
+            Token::Eq => {
+                if !parens_required && !parens {
+                    return Err("'=' operation requires parentheses.");
+                }
+                self.parse_op(Operator::Eq)?
+            }
+            Token::Dollar => {
+                if !parens_required && !parens {
+                    return Err("'$' operation requires parentheses.");
+                }
+                self.parse_op(Operator::Dollar)?
+            }
+            Token::Let => {
+                if allow_decls {
+                    let Token::Ident(ident) = self.expect(Token::Ident(String::new()), "Expected an identifier after 'let'")? else { unreachable!() };
+                    let expr = self.parse_expr(false, false)?;
+                    Expr::Let(ident, Box::new(expr))
+                } else {
+                    return Err("'let' declaration not allowed here.");
+                }
+            }
+            Token::OpenParen => unreachable!(),
+            Token::CloseParen => unreachable!(),
+        };
+
+        if parens_required {
+            self.expect(Token::CloseParen, "Expected ')' to end expression")?;
+        }
+
+        Ok(expr)
+    }
+
+    fn parse_op(&mut self, op: Operator) -> Result<Expr, &'static str> {
+        let mut operands = vec![];
+
+        while self.peek_token().is_some_and(|t| !t.discriminants_eq(&Token::CloseParen)) {
+            let operand = self.parse_expr(false, false)?;
+            operands.push(operand);
+        }
+
+        Ok(Expr::Operation(op, operands))
     }
 }
 

@@ -21,6 +21,7 @@ pub fn disasemble(code: impl IntoIterator<Item = u8>, f: &mut dyn Write) -> Resu
             Instruction::Push => disasemble_push(&mut code, is_alt, f)?,
             Instruction::PushImm => disasemble_push_imm(&mut code, is_alt, f)?,
             Instruction::Pop => disasemble_pop(&mut code, is_alt, f)?,
+            Instruction::StackLoad => disasemble_stack_load(&mut code, is_alt, f)?,
             Instruction::Map => disasemble_map(&mut code, is_alt, f)?,
             Instruction::Syscall0 => {}
             Instruction::Syscall1 => {}
@@ -168,6 +169,23 @@ fn disasemble_pop(
     let reg = extract_register(code)?;
 
     f.write_str(&format!("{reg}"))?;
+
+    Ok(())
+}
+
+fn disasemble_stack_load(
+    code: &mut impl Iterator<Item = (usize, u8)>,
+    is_alt: bool,
+    f: &mut dyn Write,
+) -> Result<()> {
+    if is_alt {
+        return Err(Error::InvalidInstruction);
+    }
+
+    let dst = extract_register(code)?;
+    let src = extract_lit64(code)?;
+
+    f.write_str(&format!("{dst}, [stk+{src}]"))?;
 
     Ok(())
 }

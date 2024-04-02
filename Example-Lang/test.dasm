@@ -1,0 +1,13 @@
+00000000	MoveImm     rq0, #10
+0000000A	Push        rq0
+0000000C	MoveImm     rq0, #20
+00000016	Push        rq0
+00000018	MoveImm     rs0, #2
+00000022	StackLoad   rq0, [stk+0]
+0000002C	Move        rs1, rq0
+0000002F	Syscall2    
+00000030	MoveImm     rs0, #2
+0000003A	StackLoad   rq0, [stk+8]
+00000044	Move        rs1, rq0
+00000047	Syscall2    
+00000048	Ret         

@@ -1,4 +1,4 @@
-(+ x y)
-($ (* x 2))
-($ the-variable-of-death)
-(let x (+ 34 35))
+(let x 10)
+(let y 20)
+($ x)
+($ y)

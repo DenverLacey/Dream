@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 morpheus = { path = "../Morpheus" }
-dream = { path = "../Dream-Machine" }
 
