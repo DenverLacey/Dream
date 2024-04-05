@@ -76,31 +76,6 @@ pub struct Operand {
 }
 
 impl Operand {
-    // pub const fn rsi() -> Self {
-    //     Self {
-    //         kind: OperandType::Register,
-    //         value: Register::RSI.to_u64(),
-    //     }
-    // }
-
-    // pub const fn rsr() -> Self {
-    //     Self {
-    //         kind: OperandType::Register,
-    //         value: Register::RSR.to_u64(),
-    //     }
-    // }
-
-    // pub const fn reg(reg_type: RegisterType, index: u8) -> Result<Self> {
-    //     if let Ok(reg) = Register::new(reg_type, index) {
-    //         Ok(Self {
-    //             kind: OperandType::Register,
-    //             value: reg.to_u64(),
-    //         })
-    //     } else {
-    //         Err(Error::BadOperandValue)
-    //     }
-    // }
-
     pub const fn reg(reg: Register) -> Self {
         Self {
             kind: OperandType::Register,
@@ -126,8 +101,8 @@ impl Operand {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OutputType {
-    Bin,
-    Lib,
+    Bin = 0,
+    Lib = 1,
 }
 
 impl OutputType {
@@ -135,3 +110,16 @@ impl OutputType {
         (self as u32).to_le_bytes()
     }
 }
+
+impl TryFrom<u32> for OutputType {
+    type Error = Error;
+    fn try_from(value: u32) -> std::result::Result<Self, Self::Error> {
+        let ot = match value {
+            0 => Self::Bin,
+            1 => Self::Lib,
+            _ => return Err(Error::InvalidOutputType),
+        };
+        Ok(ot)
+    }
+}
+

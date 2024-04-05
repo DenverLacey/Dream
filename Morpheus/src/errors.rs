@@ -2,6 +2,7 @@
 pub enum Error {
     InvalidRegister,
     VersionOutOfBounds,
+    VersionFromStrError,
     WriteError,
     BadOperandType,
     BadOperandValue,
@@ -10,6 +11,8 @@ pub enum Error {
     NotEnoughOperandsForInstruction,
     InvalidAddr,
     InvalidLit64,
+    DisassembleFailure,
+    InvalidOutputType,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
