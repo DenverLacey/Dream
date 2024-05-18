@@ -49,8 +49,7 @@ fn main() {
     let dream_file = BufReader::new(File::open(out_path).unwrap());
     let mut dasm_file = File::create(dasm_path).unwrap();
 
-    // NOTE: We're skipping 56 to ignore the dream files breamble.
-    match morpheus::disasemble(dream_file.bytes().skip(56).map(Result::unwrap), &mut dasm_file) {
+    match morpheus::disassemble(dream_file.bytes().map(Result::unwrap), &mut dasm_file) {
         Ok(_) => {},
         Err(err) => {
             println!("ERROR: {err:?}");

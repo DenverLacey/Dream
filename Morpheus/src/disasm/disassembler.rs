@@ -70,18 +70,6 @@ where
         self.bytes.next()
     }
 
-    fn next_if_eq(&mut self, byte: u8) -> Option<u8> {
-        if self.peek()? != byte {
-            None
-        } else {
-            self.next()
-        }
-    }
-
-    fn check(&mut self, byte: u8) -> bool {
-        self.peek().is_some_and(|b| b == byte)
-    }
-
     fn matches(&mut self, byte: u8) -> bool {
         if self.bytes.next_if_eq(&byte).is_some() {
             self.offset += 1;
@@ -213,7 +201,7 @@ where
                 }
             }
 
-            if !self.matches_all(b"00000000") {
+            if !self.matches_all(&[0u8; 8]) {
                 eprintln!("ERROR: Did not encounter padding bytes after string data in TEXT section.");
                 return Err(Error::DisassembleFailure);
             }

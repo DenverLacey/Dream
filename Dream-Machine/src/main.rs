@@ -1,3 +1,5 @@
+use std::{fs::File, io::{BufRead, BufReader, Read}};
+
 use clap::Parser;
 
 mod sys;
@@ -12,14 +14,16 @@ struct Cli {
 
     /// Print human-readable disassembly of the dream file
     #[arg(long = "emit-disassembly")]
-    emit_disassembly: bool,
+    emit_disassembly: Option<String>,
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    if cli.emit_disassembly {
-        todo!("--emit-disassembly");
+    if let Some(dasm_path) = cli.emit_disassembly {
+        let rdr = BufReader::new(File::open(&cli.file).unwrap());
+        let mut dasm_file = File::create(dasm_path).unwrap();
+        morpheus::disassemble(rdr.bytes().map(Result::unwrap), &mut dasm_file).unwrap();
     }
 
     println!("The file you want to run is {:?}.", cli.file);

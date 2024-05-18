@@ -98,7 +98,7 @@ impl Register {
 
 impl TryFrom<u8> for Register {
     type Error = crate::Error;
-    fn try_from(value: u8) -> std::prelude::v1::Result<Self, Self::Error> {
+    fn try_from(value: u8) -> std::result::Result<Self, Self::Error> {
         const REG_TYPE_X: u8 = RegisterType::X as u8;
         const REG_TYPE_S: u8 = RegisterType::S as u8;
         const REG_TYPE_B: u8 = RegisterType::B as u8;

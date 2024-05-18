@@ -7,9 +7,10 @@ use morpheus::{
 
 use crate::ir::{Expr, Operator};
 
-// WARN: This has to be the same as what is specified by the DreamVM.
-// TODO: Refactor so that we can use the DreamVM definition directly.
+// WARN: These have be the same as what is specified by the DreamVM.
+// TODO: Refactor so that we can use the DreamVM definitions directly.
 const STDOUT: u64 = 2;
+const SYS_WRITE: u64 = 1;
 
 #[derive(Debug, Default)]
 struct Generator {
@@ -73,6 +74,9 @@ fn compile_expression(
             if operands.len() < 1 {
                 return Err("Not enough operands for operation");
             }
+
+            b.emit_move(Operand::reg(Register::RSI), Operand::lit64(SYS_WRITE), None)
+                .expect("INTERNAL ERROR: failed to emit move instruction for dollar opeartor.");
 
             b.emit_move(Operand::reg(Register::RS0), Operand::lit64(STDOUT), None)
                 .expect("INTERNAL ERROR: failed to emit move instruction for dollar operator.");

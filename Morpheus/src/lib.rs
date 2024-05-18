@@ -12,4 +12,3 @@ pub use register_allocator::*;
 
 pub use quicksand::{OperandType, RegisterType, Register};
 
-

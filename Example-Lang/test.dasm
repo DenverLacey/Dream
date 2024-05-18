@@ -1,13 +1,22 @@
-00000000	MoveImm     rq0, #10
-0000000A	Push        rq0
-0000000C	MoveImm     rq0, #20
-00000016	Push        rq0
-00000018	MoveImm     rs0, #2
-00000022	StackLoad   rq0, [stk+0]
-0000002C	Move        rs1, rq0
-0000002F	Syscall2    
-00000030	MoveImm     rs0, #2
-0000003A	StackLoad   rq0, [stk+8]
-00000044	Move        rs1, rq0
-00000047	Syscall2    
-00000048	Ret         
+#Version 000
+#OutputType Bin
+
+00000010  TEXT:
+
+00000020  CODE:
+ENTRY:
+00000038      MoveImm     rq0, $10
+00000042      Push        rq0
+00000044      MoveImm     rq0, $20
+0000004E      Push        rq0
+00000050      Set         rsi
+00000052      MoveImm     rs0, $2
+0000005C      StackLoad   rq0, [stk+0]
+00000066      Move        rs1, rq0
+00000069      Syscall2    
+0000006A      Set         rsi
+0000006C      MoveImm     rs0, $2
+00000076      StackLoad   rq0, [stk+8]
+00000080      Move        rs1, rq0
+00000083      Syscall2    
+00000084      Ret         
